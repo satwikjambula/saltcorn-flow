@@ -1,0 +1,40 @@
+.sc-flowlist-table {
+  background: #fff;
+}
+
+.sc-flowlist-handle {
+  cursor: grab;
+  text-align: center;
+  user-select: none;
+}
+
+.sc-flowlist-handle:active {
+  cursor: grabbing;
+}
+
+.sc-flowlist-row.sc-flowlist-ghost {
+  opacity: 0.4;
+}
+
+.sc-flowlist-title-text {
+  font-weight: 500;
+}
+
+.sc-flowlist-status-select,
+.sc-flowlist-priority-select {
+  min-width: 110px;
+}
+
+.sc-flow-assignee {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}

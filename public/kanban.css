@@ -32,3 +32,36 @@
 .sc-kanban-ghost {
   opacity: 0.4;
 }
+
+.sc-flow-card-footer {
+  font-size: 0.8rem;
+}
+
+.sc-flow-assignee {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sc-flow-priority {
+  font-size: 0.7rem;
+}
+
+.sc-flow-due {
+  white-space: nowrap;
+}
+
+.sc-flow-add-col-widget {
+  min-width: 220px;
+  width: 220px;
+  flex-shrink: 0;
+  padding-top: 0.25rem;
+}

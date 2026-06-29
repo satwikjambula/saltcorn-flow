@@ -1,4 +1,3 @@
-const { getState } = require("@saltcorn/data/db/state");
 const Table = require("@saltcorn/data/models/table");
 const View = require("@saltcorn/data/models/view");
 const Field = require("@saltcorn/data/models/field");
@@ -16,16 +15,60 @@ const {
   domReady,
   a,
   i,
+  input,
+  button,
   text,
 } = require("@saltcorn/markup/tags");
 
-// ─── configuration wizard ─────────────────────────────────────────────────────
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+const PRIORITY_COLORS = {
+  Urgent: "danger",
+  High: "danger",
+  Medium: "warning",
+  Low: "secondary",
+};
+
+function dueDateHtml(row, field) {
+  if (!field || !row[field]) return "";
+  const due = new Date(row[field]);
+  const now = new Date();
+  const isOverdue = due < now;
+  const isSoon = !isOverdue && due - now < 3 * 24 * 60 * 60 * 1000;
+  const dateStr = due.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  const cls = isOverdue ? "text-danger" : isSoon ? "text-warning" : "text-muted";
+  return span({ class: `sc-flow-due small ${cls}` }, `📅 ${dateStr}`);
+}
+
+function assigneeHtml(row, field) {
+  if (!field || !row[field]) return "";
+  const name = String(row[field]);
+  const initials = name
+    .split(" ")
+    .map((w) => w[0] || "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  return span({ class: "sc-flow-assignee", title: text(name) }, initials);
+}
+
+function priorityHtml(row, field) {
+  if (!field || !row[field]) return "";
+  const val = String(row[field]);
+  const color = PRIORITY_COLORS[val] || "secondary";
+  return span({ class: `badge bg-${color} sc-flow-priority` }, text(val));
+}
+
+// ─── configuration workflow ───────────────────────────────────────────────────
 
 const configuration_workflow = (req) =>
   new Workflow({
     steps: [
       {
-        name: req.__("Kanban settings"),
+        name: req.__("Board settings"),
         form: async (context) => {
           const table = Table.findOne(context.table_id);
           const fields = table.getFields();
@@ -35,6 +78,10 @@ const configuration_workflow = (req) =>
               !f.primary_key &&
               (f.type?.name === "String" || f.type?.name === "Integer")
           );
+          const allFields = fields.filter((f) => !f.primary_key);
+          const dateFields = fields.filter(
+            (f) => !f.primary_key && f.type?.name === "Date"
+          );
 
           const show_views = await View.find_table_views_where(
             context.table_id,
@@ -42,7 +89,6 @@ const configuration_workflow = (req) =>
               viewrow.name !== context.viewname &&
               state_fields.some((sf) => sf.name === "id")
           );
-
           const create_views = await View.find_table_views_where(
             context.table_id,
             ({ state_fields, viewrow }) =>
@@ -56,19 +102,17 @@ const configuration_workflow = (req) =>
                 name: "group_field",
                 label: req.__("Group-by field"),
                 sublabel: req.__(
-                  "Cards will be grouped into columns by this field's value"
+                  "Cards are grouped into columns by this field's value"
                 ),
                 type: "String",
                 required: true,
-                attributes: {
-                  options: groupable.map((f) => f.name),
-                },
+                attributes: { options: groupable.map((f) => f.name) },
               },
               {
                 name: "column_order",
-                label: req.__("Column order (comma-separated values)"),
+                label: req.__("Column order"),
                 sublabel: req.__(
-                  "Optional: define the column order, e.g. To Do,In Progress,Done"
+                  "Comma-separated column values, e.g. To Do,In Progress,Done. Leave empty to derive from data."
                 ),
                 type: "String",
                 required: false,
@@ -76,13 +120,54 @@ const configuration_workflow = (req) =>
               {
                 name: "card_title_field",
                 label: req.__("Card title field"),
-                sublabel: req.__("The field shown as the card heading"),
+                sublabel: req.__("Field shown as the card heading"),
+                type: "String",
+                required: false,
+                attributes: { options: allFields.map((f) => f.name) },
+              },
+              {
+                name: "due_date_field",
+                label: req.__("Due date field"),
+                sublabel: req.__(
+                  "Optional Date field — shown on cards with colour coding"
+                ),
                 type: "String",
                 required: false,
                 attributes: {
-                  options: fields
-                    .filter((f) => !f.primary_key)
-                    .map((f) => f.name),
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...dateFields.map((f) => f.name),
+                  ],
+                },
+              },
+              {
+                name: "assignee_field",
+                label: req.__("Assignee field"),
+                sublabel: req.__(
+                  "Optional field — displayed as an avatar initial on each card"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...allFields.map((f) => f.name),
+                  ],
+                },
+              },
+              {
+                name: "priority_field",
+                label: req.__("Priority field"),
+                sublabel: req.__(
+                  "Optional String field — values Urgent/High/Medium/Low get colour badges"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...groupable.map((f) => f.name),
+                  ],
                 },
               },
               {
@@ -102,8 +187,10 @@ const configuration_workflow = (req) =>
               },
               {
                 name: "view_to_create",
-                label: req.__("Use view to create"),
-                sublabel: req.__("Optional: show a button to add new cards"),
+                label: req.__("Create view"),
+                sublabel: req.__(
+                  "Optional: show an Add button in each column"
+                ),
                 type: "String",
                 required: false,
                 attributes: {
@@ -115,7 +202,7 @@ const configuration_workflow = (req) =>
               },
               {
                 name: "min_role",
-                label: req.__("Minimum role to move cards"),
+                label: req.__("Minimum role to move / add columns"),
                 type: "String",
                 required: false,
                 attributes: {
@@ -136,7 +223,7 @@ const configuration_workflow = (req) =>
 
 // ─── state fields ─────────────────────────────────────────────────────────────
 
-const get_state_fields = async (table_id, _viewname, _config) => {
+const get_state_fields = async (table_id) => {
   const table = Table.findOne(table_id);
   return table
     .getFields()
@@ -157,14 +244,16 @@ const run = async (
     group_field,
     column_order,
     card_title_field,
+    due_date_field,
+    assignee_field,
+    priority_field,
     show_view,
     view_to_create,
     min_role,
   },
   state,
-  extraArgs
+  { req }
 ) => {
-  const { req } = extraArgs;
   const table = Table.findOne(table_id);
   const pk_name = table.pk_name;
   const fields = table.getFields();
@@ -172,7 +261,7 @@ const run = async (
   if (!group_field) {
     return div(
       { class: "alert alert-warning" },
-      "Kanban: no group-by field configured."
+      "FlowBoard: no group-by field configured."
     );
   }
 
@@ -184,7 +273,7 @@ const run = async (
     forPublic: !req.user,
   });
 
-  // Determine column list
+  // ── determine columns ───────────────────────────────────────────────────────
   let columns;
   if (column_order && column_order.trim()) {
     columns = column_order.split(",").map((s) => s.trim());
@@ -193,15 +282,12 @@ const run = async (
     columns = [];
     for (const row of rows) {
       const val = String(row[group_field] ?? "");
-      if (!seen.has(val)) {
-        seen.add(val);
-        columns.push(val);
-      }
+      if (!seen.has(val)) { seen.add(val); columns.push(val); }
     }
     if (columns.length === 0) columns = ["(empty)"];
   }
 
-  // Group rows into columns
+  // ── group rows ──────────────────────────────────────────────────────────────
   const grouped = {};
   for (const col of columns) grouped[col] = [];
   for (const row of rows) {
@@ -217,25 +303,39 @@ const run = async (
   const role = req.user ? req.user.role_id : 100;
   const canMove = role <= parseInt(min_role || "80", 10);
 
-  // ── build HTML ──────────────────────────────────────────────────────────────
-
+  // ── card HTML ───────────────────────────────────────────────────────────────
   const cardHtml = (row) => {
     const titleVal = card_title_field
       ? text(String(row[card_title_field] ?? ""))
       : text(String(row[pk_name]));
 
+    const footer =
+      due_date_field || assignee_field || priority_field
+        ? div(
+            { class: "sc-flow-card-footer d-flex justify-content-between align-items-center mt-2" },
+            div({ class: "d-flex align-items-center gap-1" },
+              priorityHtml(row, priority_field),
+              dueDateHtml(row, due_date_field)
+            ),
+            assigneeHtml(row, assignee_field)
+          )
+        : "";
+
     const cardBody = div(
       { class: "card-body p-2" },
-      h5({ class: "card-title mb-1 sc-kanban-title" }, titleVal)
+      h5({ class: "card-title mb-1 sc-flow-card-title" }, titleVal),
+      footer
     );
+
+    const attrs = {
+      class: "card sc-kanban-card mb-2",
+      "data-id": String(row[pk_name]),
+      "data-group": String(row[group_field] ?? ""),
+    };
 
     if (show_view) {
       return div(
-        {
-          class: "card sc-kanban-card mb-2",
-          "data-id": row[pk_name],
-          "data-group": String(row[group_field] ?? ""),
-        },
+        attrs,
         a(
           {
             href: "javascript:void(0)",
@@ -246,44 +346,34 @@ const run = async (
         )
       );
     }
-
-    return div(
-      {
-        class: "card sc-kanban-card mb-2",
-        "data-id": row[pk_name],
-        "data-group": String(row[group_field] ?? ""),
-      },
-      cardBody
-    );
+    return div(attrs, cardBody);
   };
 
-  const addBtn = (colValue) => {
+  // ── add-card button ─────────────────────────────────────────────────────────
+  const addCardBtn = (colValue) => {
     if (!view_to_create) return "";
     const qs = new URLSearchParams({ [group_field]: colValue }).toString();
     return div(
-      { class: "mt-2 text-center" },
+      { class: "mt-2" },
       a(
         {
           href: `/view/${view_to_create}?${qs}`,
-          class: "btn btn-sm btn-outline-secondary w-100 sc-kanban-add",
+          class: "btn btn-sm btn-outline-secondary w-100 sc-flow-add-card",
         },
         i({ class: "fas fa-plus me-1" }),
-        req.__("Add")
+        req.__("Add card")
       )
     );
   };
 
+  // ── column HTML ─────────────────────────────────────────────────────────────
   const columnHtml = (col) =>
     div(
       { class: "sc-kanban-column card" },
       div(
-        {
-          class:
-            "sc-kanban-col-header card-header d-flex justify-content-between align-items-center",
-        },
+        { class: "sc-kanban-col-header card-header d-flex justify-content-between align-items-center" },
         span({ class: "fw-semibold" }, text(col)),
-        span(
-          { class: "badge bg-secondary sc-kanban-count" },
+        span({ class: "badge bg-secondary sc-kanban-count" },
           String((grouped[col] || []).length)
         )
       ),
@@ -294,82 +384,119 @@ const run = async (
           "data-viewname": viewname,
         },
         ...(grouped[col] || []).map(cardHtml),
-        addBtn(col)
+        addCardBtn(col)
       )
     );
+
+  // ── add-column widget (only for users who can move) ─────────────────────────
+  const addColWidget = canMove
+    ? div(
+        { class: "sc-flow-add-col-widget" },
+        div(
+          { class: "input-group input-group-sm" },
+          input({
+            type: "text",
+            class: "form-control sc-flow-new-col-input",
+            placeholder: req.__("New column…"),
+          }),
+          button(
+            {
+              class: "btn btn-outline-primary sc-flow-new-col-btn",
+              type: "button",
+              "data-viewname": viewname,
+            },
+            "+"
+          )
+        )
+      )
+    : "";
 
   const boardId = `sc-kanban-${viewname.replace(/\W/g, "_")}`;
   const boardHtml = div(
     { class: "sc-kanban-board", id: boardId },
-    ...columns.map(columnHtml)
+    ...columns.map(columnHtml),
+    addColWidget
   );
 
   if (!canMove) return boardHtml;
 
-  // ── drag-and-drop script (SortableJS loaded via plugin headers) ────────────
-  const dragScript =
-    script(domReady(`
+  // ── scripts ─────────────────────────────────────────────────────────────────
+  const dragScript = script(
+    domReady(`
 (function() {
   var board = document.getElementById(${JSON.stringify(boardId)});
   if (!board) return;
+
+  // drag cards between columns
   board.querySelectorAll('.sc-kanban-cards').forEach(function(lane) {
     new Sortable(lane, {
       group: ${JSON.stringify(boardId)},
       animation: 150,
       ghostClass: 'sc-kanban-ghost',
+      filter: '.sc-flow-add-card',
       onEnd: function(evt) {
-        var card = evt.item;
-        var id = card.getAttribute('data-id');
+        var id = evt.item.getAttribute('data-id');
         var newCol = evt.to.getAttribute('data-column');
-        var viewname = evt.to.getAttribute('data-viewname');
-        if (!id || !newCol || !viewname) return;
-        [evt.from, evt.to].forEach(function(lane) {
-          var col = lane.closest('.sc-kanban-column');
-          if (col) {
-            col.querySelector('.sc-kanban-count').textContent =
-              lane.querySelectorAll('.sc-kanban-card').length;
-          }
+        var vn = evt.to.getAttribute('data-viewname');
+        if (!id || !newCol || !vn) return;
+        [evt.from, evt.to].forEach(function(l) {
+          var col = l.closest('.sc-kanban-column');
+          if (col) col.querySelector('.sc-kanban-count').textContent =
+            l.querySelectorAll('.sc-kanban-card').length;
         });
-        fetch('/view/' + viewname + '/move_card', {
+        fetch('/view/' + vn + '/move_card', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'CSRF-Token': _sc_get_csrf_token()
-          },
+          headers: { 'Content-Type': 'application/json',
+                     'CSRF-Token': _sc_get_csrf_token() },
           body: JSON.stringify({ id: id, column: newCol })
         }).then(function(r) {
-          if (!r.ok) {
-            notifyAlert({ type: 'danger', text: 'Move failed' });
-            location.reload();
-          }
+          if (!r.ok) { notifyAlert({ type:'danger', text:'Move failed' }); location.reload(); }
         }).catch(function() { location.reload(); });
       }
     });
   });
+
+  // add new column
+  board.querySelectorAll('.sc-flow-new-col-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var inp = btn.closest('.input-group').querySelector('.sc-flow-new-col-input');
+      var name = inp.value.trim();
+      if (!name) { inp.focus(); return; }
+      var vn = btn.getAttribute('data-viewname');
+      btn.disabled = true;
+      fetch('/view/' + vn + '/add_column', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json',
+                   'CSRF-Token': _sc_get_csrf_token() },
+        body: JSON.stringify({ column_name: name })
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.error) { notifyAlert({ type:'danger', text: data.error }); btn.disabled = false; }
+        else { location.reload(); }
+      }).catch(function() { btn.disabled = false; });
+    });
+    // submit on Enter
+    btn.closest('.input-group').querySelector('.sc-flow-new-col-input')
+      .addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') btn.click();
+      });
+  });
 })();
-`));
+`)
+  );
 
   return boardHtml + dragScript;
 };
 
-// ─── move_card route ──────────────────────────────────────────────────────────
+// ─── routes ───────────────────────────────────────────────────────────────────
 
-const move_card = async (
-  table_id,
-  _viewname,
-  { group_field, min_role },
-  body,
-  { req }
-) => {
+const move_card = async (table_id, _vn, { group_field, min_role }, body, { req }) => {
   const role = req.user ? req.user.role_id : 100;
-  if (role > parseInt(min_role || "80", 10)) {
+  if (role > parseInt(min_role || "80", 10))
     return { json: { error: "Not authorized" } };
-  }
 
   const { id, column } = body;
-  if (!id || column === undefined) {
+  if (!id || column === undefined)
     return { json: { error: "Missing id or column" } };
-  }
 
   const table = Table.findOne(table_id);
   try {
@@ -380,17 +507,41 @@ const move_card = async (
   }
 };
 
+const add_column = async (table_id, viewname, config, body, { req }) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(config.min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  const column_name = (body.column_name || "").trim();
+  if (!column_name)
+    return { json: { error: "Column name required" } };
+
+  const view = View.findOne({ name: viewname });
+  if (!view) return { json: { error: "View not found" } };
+
+  const current = config.column_order
+    ? config.column_order.split(",").map((s) => s.trim())
+    : [];
+  if (current.includes(column_name))
+    return { json: { error: "Column already exists" } };
+
+  current.push(column_name);
+  await View.update(
+    { configuration: { ...config, column_order: current.join(",") } },
+    view.id
+  );
+  return { json: { success: true } };
+};
+
 // ─── export ───────────────────────────────────────────────────────────────────
 
 module.exports = {
   name: "FlowBoard",
   description:
-    "Asana-style board view — rows as cards grouped into draggable columns by a field value",
+    "Asana-style board view — cards in draggable columns with due dates, assignees, priorities, and add-column support",
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { move_card },
-  getStringsForI18n() {
-    return [];
-  },
+  routes: { move_card, add_column },
+  getStringsForI18n() { return []; },
 };
