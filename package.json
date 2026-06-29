@@ -1,0 +1,12 @@
+{
+  "name": "saltcorn-kanban-simple",
+  "version": "0.1.0",
+  "description": "Simple Kanban board view plugin for Saltcorn using SortableJS",
+  "main": "index.js",
+  "keywords": ["saltcorn", "plugin", "kanban", "board"],
+  "license": "MIT",
+  "dependencies": {
+    "@saltcorn/markup": ">=0.5.0",
+    "@saltcorn/data": ">=0.5.0"
+  }
+}
