@@ -383,9 +383,9 @@ const move_card = async (
 // ─── export ───────────────────────────────────────────────────────────────────
 
 module.exports = {
-  name: "Kanban",
+  name: "FlowBoard",
   description:
-    "Display rows as cards grouped into draggable swim-lane columns by a field value",
+    "Asana-style board view — rows as cards grouped into draggable columns by a field value",
   configuration_workflow,
   run,
   get_state_fields,

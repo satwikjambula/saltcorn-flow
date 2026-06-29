@@ -1,8 +1,8 @@
-# saltcorn-kanban-simple
+# saltcorn-flow
 
-A simple Kanban board view plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
+An Asana-style project and task management plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
 
-Displays table rows as cards grouped into swim-lane columns by a field value, with drag-and-drop reordering powered by [SortableJS](https://sortablejs.com).
+Adds a **FlowBoard** view template — drag-and-drop card board powered by [SortableJS](https://sortablejs.com). More view types (list, timeline, calendar) are planned.
 
 ## Features
 
@@ -19,17 +19,17 @@ Displays table rows as cards grouped into swim-lane columns by a field value, wi
 Install from the Saltcorn plugin store, or manually:
 
 ```
-npm install saltcorn-kanban-simple
+npm install saltcorn-flow
 ```
 
 Then add the plugin in **Settings → Plugins**.
 
-## Configuration
+## FlowBoard configuration
 
 | Field | Description |
 |-------|-------------|
 | Group-by field | String or Integer field whose value determines the column |
-| Column order | Optional comma-separated list of values, e.g. `To Do,In Progress,Done` |
+| Column order | Optional comma-separated list, e.g. `To Do,In Progress,Done` |
 | Card title field | Field displayed as the card heading |
 | Card detail view | Optional Show view opened in a modal on card click |
 | Use view to create | Optional Create view linked from an Add button in each column |

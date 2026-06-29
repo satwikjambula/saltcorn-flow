@@ -1,9 +1,9 @@
 {
-  "name": "saltcorn-kanban-simple",
+  "name": "saltcorn-flow",
   "version": "0.1.0",
-  "description": "Simple Kanban board view plugin for Saltcorn using SortableJS",
+  "description": "Asana-style project and task management plugin for Saltcorn",
   "main": "index.js",
-  "keywords": ["saltcorn", "plugin", "kanban", "board"],
+  "keywords": ["saltcorn", "plugin", "kanban", "board", "tasks", "project-management"],
   "license": "MIT",
   "dependencies": {
     "@saltcorn/markup": ">=0.5.0",
