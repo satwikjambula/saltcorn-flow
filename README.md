@@ -1,39 +1,180 @@
 # saltcorn-flow
 
-An Asana-style project and task management plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
+Asana-style project and task management plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
 
-Adds a **FlowBoard** view template — drag-and-drop card board powered by [SortableJS](https://sortablejs.com). More view types (list, timeline, calendar) are planned.
+Adds two view templates to any table:
 
-## Features
+- **FlowBoard** — drag-and-drop kanban board with columns, card metadata, and inline column creation
+- **FlowList** — flat sortable task list with inline status editing, priority badges, due dates, and assignee avatars
 
-- Group rows into columns by any String or Integer field
-- Drag cards between columns — updates the database immediately
-- Configurable column order
-- Optional card-click modal (link to a Show view)
-- Optional "Add card" button per column (link to a Create view)
-- Role-based drag permission (Admin / Staff / User / Public)
-- Badge showing card count per column
+Powered by [SortableJS](https://sortablejs.com).
+
+---
+
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [FlowBoard](#flowboard)
+- [FlowList](#flowlist)
+- [Testing locally](#testing-locally)
+- [License](#license)
+
+---
+
+## Requirements
+
+- **Saltcorn** v1.0.0 or later
+
+---
 
 ## Installation
 
-Install from the Saltcorn plugin store, or manually:
+### From the plugin store
 
-```
+1. Go to **Settings → Plugins → Plugin Store**
+2. Search for `saltcorn-flow`
+3. Click **Install**
+
+### From npm
+
+```bash
 npm install saltcorn-flow
 ```
 
-Then add the plugin in **Settings → Plugins**.
+Then in Saltcorn: **Settings → Plugins → Install from npm** → enter `saltcorn-flow`.
 
-## FlowBoard configuration
+---
 
-| Field | Description |
-|-------|-------------|
-| Group-by field | String or Integer field whose value determines the column |
-| Column order | Optional comma-separated list, e.g. `To Do,In Progress,Done` |
-| Card title field | Field displayed as the card heading |
-| Card detail view | Optional Show view opened in a modal on card click |
-| Use view to create | Optional Create view linked from an Add button in each column |
-| Minimum role to move cards | Lowest role that can drag cards (default: User) |
+## FlowBoard
+
+A kanban board that groups rows into columns by any field value. Cards can be dragged between columns to update the database instantly.
+
+### Configuration
+
+| Field | Required | Description |
+|---|---|---|
+| Group-by field | ✅ | String or Integer field whose value determines the column (e.g. `status`, `stage`) |
+| Column order | — | Comma-separated list of column names in display order, e.g. `To Do,In Progress,Done` |
+| Card title field | ✅ | Field shown as the card heading |
+| Due date field | — | Date field — cards show a coloured due date badge (red if overdue, yellow if ≤ 3 days) |
+| Assignee field | — | String field — shown as a circular avatar with the first two characters |
+| Priority field | — | String field — values `Urgent` / `High` show a danger badge; `Medium` warning; `Low` secondary |
+| Card detail view | — | Show view opened in a modal when a card is clicked |
+| Use view to create | — | Create view linked from an **Add card** button at the bottom of each column |
+| Minimum role to move cards | — | Lowest role that can drag cards between columns (default: User) |
+
+### Features
+
+- Drag cards between columns — group-by field updated immediately via `POST /view/{name}/move_card`
+- Card count badge per column
+- Colour-coded due date, circular assignee avatar, priority badge on each card
+- **Add column** widget at the right end of the board — type a name and click Add to append a new column to the column order (persisted to view config)
+- Optional card-click modal and per-column Add card button
+
+### Example table setup
+
+| Field | Type | Used for |
+|---|---|---|
+| `title` | String | Card title field |
+| `status` | String | Group-by field (values: `To Do`, `In Progress`, `Done`) |
+| `due_date` | Date | Due date field |
+| `assignee` | String | Assignee field (e.g. `Alice`, `Bob`) |
+| `priority` | String | Priority field (values: `Urgent`, `High`, `Medium`, `Low`) |
+
+---
+
+## FlowList
+
+A flat, sortable task list displayed as a table. Status and priority can be edited inline without leaving the page. Rows can be dragged to reorder if a position field is configured.
+
+### Configuration
+
+| Field | Required | Description |
+|---|---|---|
+| Title field | ✅ | Field shown in the first column as the task name |
+| Status field | — | String field — rendered as an inline `<select>` dropdown |
+| Status options | — | Comma-separated list of valid status values, e.g. `Open,In Progress,Done` |
+| Due date field | — | Date field — shown with colour coding (red if overdue, yellow if ≤ 3 days) |
+| Assignee field | — | String field — shown as a circular avatar |
+| Priority field | — | String field — rendered as an inline `<select>` with badge-coloured options |
+| Position field | — | Integer field that stores row order — enables drag-to-reorder |
+| Minimum role to edit / reorder | — | Lowest role that can change status, priority, or drag rows (default: User) |
+
+### Features
+
+- Inline status and priority editing via `<select>` dropdowns — saves to DB immediately
+- Drag handle column for reordering rows — positions saved in bulk
+- Due date colour coding and assignee avatars consistent with FlowBoard
+- Scrollable table layout — works on mobile
+
+### Example table setup
+
+| Field | Type | Used for |
+|---|---|---|
+| `title` | String | Title field |
+| `status` | String | Status field (values: `Open`, `In Progress`, `Done`) |
+| `priority` | String | Priority field (values: `Urgent`, `High`, `Medium`, `Low`) |
+| `due_date` | Date | Due date field |
+| `assignee` | String | Assignee field |
+| `position` | Integer | Position field (for drag-to-reorder) |
+
+---
+
+## Testing locally
+
+### Prerequisites
+
+- Node.js 18+
+- Saltcorn installed globally: `npm install -g @saltcorn/cli`
+
+### Step 1 — Clone the plugin
+
+```bash
+git clone https://github.com/satwikjambula/saltcorn-flow
+cd saltcorn-flow
+npm install
+```
+
+### Step 2 — Register with your local Saltcorn instance
+
+```bash
+saltcorn install-plugin -d /absolute/path/to/saltcorn-flow
+```
+
+> If the command silently fails, insert directly:
+> ```bash
+> sqlite3 ~/Library/Application\ Support/saltcorn/scdb.sqlite \
+>   "INSERT OR REPLACE INTO _sc_plugins (name, source, location) \
+>    VALUES ('saltcorn-flow', 'local', '/absolute/path/to/saltcorn-flow');"
+> ```
+
+### Step 3 — Start the server
+
+```bash
+saltcorn serve
+```
+
+### Step 4 — Create a test table
+
+Go to **Tables → Add table** and create a table with the fields from the example setup above.
+
+### Step 5 — Create a FlowBoard view
+
+1. Go to **Views → Add view**
+2. Select the table, template: **FlowBoard**, give it a name
+3. Set group-by field to `status`, card title field to `title`
+4. Optionally set due date, assignee, and priority fields
+5. Save — insert a few rows first, then open the view to see cards
+
+### Step 6 — Create a FlowList view
+
+1. Go to **Views → Add view**
+2. Select the same table, template: **FlowList**
+3. Set title field, status field (`status`), status options (`Open,In Progress,Done`), position field (`position`)
+4. Save and open — drag rows to reorder and edit status inline
+
+---
 
 ## License
 
