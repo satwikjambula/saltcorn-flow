@@ -6,7 +6,7 @@ module.exports = {
   headers: [
     {
       script: "https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js",
-      onlyViews: ["FlowBoard", "FlowList"],
+      onlyViews: ["FlowBoard", "FlowList", "FlowZone"],
     },
     {
       css: `/plugins/public/saltcorn-flow@${version}/kanban.css`,
@@ -16,7 +16,11 @@ module.exports = {
       css: `/plugins/public/saltcorn-flow@${version}/flowlist.css`,
       onlyViews: ["FlowList"],
     },
+    {
+      css: `/plugins/public/saltcorn-flow@${version}/flowzone.css`,
+      onlyViews: ["FlowZone"],
+    },
   ],
-  viewtemplates: [require("./kanban"), require("./flowlist")],
+  viewtemplates: [require("./kanban"), require("./flowlist"), require("./flowzone")],
   ready_for_mobile: false,
 };
