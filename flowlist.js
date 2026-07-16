@@ -432,15 +432,37 @@ const run = async (
 
   const listId = `sc-flowlist-${viewname.replace(/\W/g, "_")}`;
 
+  const searchBar = div(
+    { class: "sc-flow-search-bar mb-2" },
+    div(
+      { class: "input-group input-group-sm" },
+      span({ class: "input-group-text" }, "🔍"),
+      input({
+        type: "search",
+        class: "form-control sc-flow-search-input",
+        placeholder: req.__("Filter tasks…"),
+        "data-target": listId,
+        "data-item": ".sc-flowlist-row",
+        "data-text": ".sc-flowlist-title-text,.sc-flowlist-title-editable,.sc-flowlist-title-link",
+        "data-counter": null,
+        "data-counter-src": null,
+      })
+    )
+  );
+
   const listHtml = div(
-    { class: "sc-flowlist-wrapper table-responsive" },
-    tableTag(
+    { class: "sc-flowlist-wrapper" },
+    searchBar,
+    div(
+      { class: "table-responsive" },
+      tableTag(
       { class: "table table-hover sc-flowlist-table", id: listId },
       thead({ class: "table-light" }, headerRow),
       tbody(
         { class: "sc-flowlist-tbody", "data-viewname": viewname },
         ...rows.map(dataRow)
       )
+    )
     )
   );
 
@@ -493,7 +515,25 @@ const run = async (
       )
     : "";
 
-  if (!canEdit) return posWarn + listHtml;
+  // search filter script (works for read-only users too)
+  const searchScript = script(
+    domReady(`
+(function() {
+  var inp = document.querySelector('.sc-flow-search-input[data-target=${JSON.stringify(listId)}]');
+  if (!inp) return;
+  inp.addEventListener('input', function() {
+    var q = inp.value.trim().toLowerCase();
+    document.querySelectorAll('#' + ${JSON.stringify(listId)} + ' .sc-flowlist-row').forEach(function(row) {
+      var titleEl = row.querySelector('.sc-flowlist-title-text, .sc-flowlist-title-editable, .sc-flowlist-title-link');
+      var match = !q || (titleEl && titleEl.textContent.toLowerCase().includes(q));
+      row.classList.toggle('d-none', !match);
+    });
+  });
+})();
+`)
+  );
+
+  if (!canEdit) return posWarn + listHtml + searchScript;
 
   // ── scripts ──────────────────────────────────────────────────────────────────
   const editorScript = script(
@@ -661,7 +701,7 @@ const run = async (
 `)
   );
 
-  return posWarn + listHtml + bulkToolbar + editorScript;
+  return posWarn + listHtml + bulkToolbar + searchScript + editorScript;
 };
 
 // ─── routes ───────────────────────────────────────────────────────────────────

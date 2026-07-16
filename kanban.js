@@ -54,6 +54,42 @@ function priorityHtml(row, field) {
   return span({ class: `badge bg-${color} sc-flow-priority` }, text(val));
 }
 
+// ─── shared: client-side search/filter script ────────────────────────────────
+
+function filterScript(scopeId) {
+  const { script, domReady } = require("@saltcorn/markup/tags");
+  return script(
+    domReady(`
+(function() {
+  document.querySelectorAll('.sc-flow-search-input[data-target=${JSON.stringify(scopeId)}]')
+    .forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        var q = inp.value.trim().toLowerCase();
+        var scope = document.getElementById(inp.getAttribute('data-target'));
+        if (!scope) return;
+        var itemSel = inp.getAttribute('data-item');
+        var textSel = inp.getAttribute('data-text');
+        scope.querySelectorAll(itemSel).forEach(function(item) {
+          var label = (textSel ? item.querySelector(textSel) : item);
+          var match = !q || (label && label.textContent.toLowerCase().includes(q));
+          item.classList.toggle('d-none', !match);
+        });
+        // update column/zone count badges
+        var counterSel = inp.getAttribute('data-counter');
+        var counterSrc = inp.getAttribute('data-counter-src');
+        if (counterSel && counterSrc) {
+          scope.querySelectorAll(counterSel).forEach(function(badge) {
+            var parent = badge.closest('[class*="sc-kanban-column"],[class*="sc-flowzone-panel"],[class*="sc-flowlist"]');
+            if (parent) badge.textContent = parent.querySelectorAll(counterSrc).length;
+          });
+        }
+      });
+    });
+})();
+`)
+  );
+}
+
 // ─── configuration workflow ───────────────────────────────────────────────────
 
 const configuration_workflow = (req) => {
@@ -463,13 +499,36 @@ const run = async (
     : "";
 
   const boardId = `sc-kanban-${viewname.replace(/\W/g, "_")}`;
-  const boardHtml = div(
-    { class: "sc-kanban-board", id: boardId },
-    ...columns.map(columnHtml),
-    addColWidget
+
+  const searchBar = div(
+    { class: "sc-flow-search-bar mb-3" },
+    div(
+      { class: "input-group input-group-sm" },
+      span({ class: "input-group-text" }, "🔍"),
+      input({
+        type: "search",
+        class: "form-control sc-flow-search-input",
+        placeholder: req.__("Filter cards…"),
+        "data-target": boardId,
+        "data-item": ".sc-kanban-card",
+        "data-text": ".sc-flow-card-title",
+        "data-counter": ".sc-kanban-count",
+        "data-counter-src": ".sc-kanban-cards .sc-kanban-card:not(.d-none)",
+      })
+    )
   );
 
-  if (!canMove) return boardHtml;
+  const boardHtml = div(
+    {},
+    searchBar,
+    div(
+      { class: "sc-kanban-board", id: boardId },
+      ...columns.map(columnHtml),
+      addColWidget
+    )
+  );
+
+  if (!canMove) return boardHtml + filterScript(boardId);
 
   // ── scripts ─────────────────────────────────────────────────────────────────
   const dragScript = script(
@@ -570,7 +629,7 @@ const run = async (
 `)
   );
 
-  return boardHtml + dragScript;
+  return boardHtml + filterScript(boardId) + dragScript;
 };
 
 // ─── routes ───────────────────────────────────────────────────────────────────
