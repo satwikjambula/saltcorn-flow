@@ -22,16 +22,15 @@ Adds **six view templates** to any table — kanban boards, task lists, zone buc
 
 ### FlowMatrix — 2-D Grid
 
-![FlowMatrix 2-D grid placing cards at the intersection of two categorical axes](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowmatrix.png)
+![FlowMatrix 2-D grid placing cards at the intersection of two categorical axes]()
 
 ### FlowCalendar — Monthly Calendar
 
-![FlowCalendar monthly calendar with colour-coded event chips and drag-to-reschedule](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowcalendar.png)
+![FlowCalendar monthly calendar with colour-coded event chips and drag-to-reschedule]()
 
 ### FlowTimeline — Gantt Timeline
 
-![FlowTimeline Gantt timeline with colour-coded bars and drag-to-reschedule](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowtimeline.png)
-
+![FlowTimeline Gantt timeline with colour-coded bars and drag-to-reschedule]()
 ---
 
 ## Table of Contents
