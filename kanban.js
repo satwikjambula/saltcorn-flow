@@ -197,6 +197,23 @@ const configuration_workflow = (req) => {
                 },
               },
               {
+                name: "position_field",
+                label: req.__("Position field"),
+                sublabel: req.__(
+                  "Optional Integer field — stores card order within each column and enables drag-to-reorder within a column"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...fields
+                      .filter((f) => !f.primary_key && f.type?.name === "Integer")
+                      .map((f) => f.name),
+                  ],
+                },
+              },
+              {
                 name: "wip_limits",
                 label: req.__("WIP limits per column"),
                 sublabel: req.__(
@@ -257,6 +274,7 @@ const run = async (
     priority_field,
     show_view,
     view_to_create,
+    position_field,
     wip_limits,
     min_role,
   },
@@ -278,8 +296,10 @@ const run = async (
 
   const where = stateFieldsToWhere({ fields, state, table });
   const q = stateFieldsToQuery({ state, fields });
+  const cardOrderBy = position_field ? { orderBy: position_field } : {};
   const rows = await table.getRows(where, {
     ...q,
+    ...cardOrderBy,
     forUser: req.user,
     forPublic: !req.user,
   });
@@ -480,8 +500,10 @@ const run = async (
       onEnd: function(evt) {
         var id = evt.item.getAttribute('data-id');
         var newCol = evt.to.getAttribute('data-column');
+        var fromCol = evt.from.getAttribute('data-column');
         var vn = evt.to.getAttribute('data-viewname');
         if (!id || !newCol || !vn) return;
+
         [evt.from, evt.to].forEach(function(l) {
           var col = l.closest('.sc-kanban-column');
           if (!col) return;
@@ -491,6 +513,23 @@ const run = async (
           badge.textContent = count;
           badge.className = 'badge sc-kanban-count ' + (max > 0 && count >= max ? 'bg-danger' : 'bg-secondary');
         });
+
+        if (newCol === fromCol && ${JSON.stringify(!!position_field)}) {
+          var ids = Array.from(evt.to.querySelectorAll('.sc-kanban-card'))
+            .map(function(el) { return el.getAttribute('data-id'); });
+          fetch('/view/' + vn + '/reorder_column', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json',
+                       'CSRF-Token': _sc_get_csrf_token() },
+            body: JSON.stringify({ column: newCol, order: ids })
+          }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.error) notifyAlert({ type: 'danger', text: data.error });
+          }).catch(function() {
+            notifyAlert({ type: 'danger', text: 'Reorder failed' });
+          });
+          return;
+        }
+
         fetch('/view/' + vn + '/move_card', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json',
@@ -600,6 +639,37 @@ const add_column = async (table_id, viewname, config, body, { req }) => {
   return { json: { success: true } };
 };
 
+const reorder_column = async (
+  table_id,
+  _vn,
+  { position_field, min_role },
+  body,
+  { req }
+) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  if (!position_field)
+    return { json: { error: "No position field configured" } };
+
+  const { order } = body;
+  if (!Array.isArray(order))
+    return { json: { error: "Invalid order payload" } };
+
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+  try {
+    await Promise.all(
+      order.map((id, idx) =>
+        table.updateRow({ [position_field]: idx + 1 }, parseInt(id, 10), req.user)
+      )
+    );
+    return { json: { success: true } };
+  } catch (e) {
+    return { json: { error: e.message || "Reorder failed" } };
+  }
+};
+
 // ─── export ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -609,6 +679,6 @@ module.exports = {
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { move_card, add_column },
+  routes: { move_card, add_column, reorder_column },
   getStringsForI18n() { return []; },
 };
