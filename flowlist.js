@@ -371,6 +371,18 @@ const run = async (
               },
               text(String(row[title_field] ?? ""))
             )
+          : canEdit
+          ? span(
+              {
+                class: "sc-flowlist-title-text sc-flowlist-title-editable",
+                contenteditable: "true",
+                "data-id": String(row[pk_name]),
+                "data-field": title_field,
+                "data-viewname": viewname,
+                "data-original": String(row[title_field] ?? ""),
+              },
+              text(String(row[title_field] ?? ""))
+            )
           : span({ class: "sc-flowlist-title-text" }, text(String(row[title_field] ?? "")))
       ),
       showStatus ? td({ class: "sc-flowlist-status-cell" }, statusSelect(row)) : "",
@@ -450,6 +462,36 @@ const run = async (
         );
       });
     });
+
+  // inline title editing
+  listEl.querySelectorAll('.sc-flowlist-title-editable').forEach(function(el) {
+    var saved = el.getAttribute('data-original');
+
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') {
+        el.textContent = saved;
+        el.blur();
+      }
+    });
+
+    el.addEventListener('blur', function() {
+      var newVal = el.textContent.trim();
+      if (newVal === saved) return;
+      if (!newVal) { el.textContent = saved; return; }
+      saved = newVal;
+      el.setAttribute('data-original', newVal);
+      updateField(
+        el.getAttribute('data-id'),
+        el.getAttribute('data-field'),
+        newVal,
+        el.getAttribute('data-viewname')
+      );
+    });
+
+    // prevent drag handle from capturing clicks on the title
+    el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  });
 
   ${canReorder ? `
   // drag-to-reorder rows
