@@ -52,6 +52,7 @@ const configuration_workflow = (req) => {
           const stringIntFields = allFields.filter(
             (f) => f.type?.name === "String" || f.type?.name === "Integer"
           );
+          const intFields = allFields.filter((f) => f.type?.name === "Integer");
 
           const show_views = await View.find_table_views_where(
             context.table_id,
@@ -141,6 +142,21 @@ const configuration_workflow = (req) => {
                   options: [
                     { label: req.__("None"), value: "" },
                     ...show_views.map((v) => v.select_option),
+                  ],
+                },
+              },
+              {
+                name: "position_field",
+                label: req.__("Position field"),
+                sublabel: req.__(
+                  "Optional Integer field that stores item order within each zone — enables drag-to-reorder within a zone"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...intFields.map((f) => f.name),
                   ],
                 },
               },
@@ -249,6 +265,7 @@ const run = async (
     show_view,
     show_unassigned,
     min_role,
+    position_field,
     submit_zones: submitZonesRaw,
     submit_label,
     submit_action_name,
@@ -271,8 +288,10 @@ const run = async (
 
   const where = stateFieldsToWhere({ fields, state, table });
   const q = stateFieldsToQuery({ state, fields });
+  const orderBy = position_field ? { orderBy: position_field } : {};
   const rows = await table.getRows(where, {
     ...q,
+    ...orderBy,
     forUser: req.user,
     forPublic: !req.user,
   });
@@ -458,17 +477,42 @@ const run = async (
       onEnd: function(evt) {
         var id = evt.item.getAttribute('data-id');
         var newZone = evt.to.getAttribute('data-zone');
+        var fromZone = evt.from.getAttribute('data-zone');
         var vn = evt.to.getAttribute('data-viewname');
         if (id === null || newZone === null || !vn) return;
 
-        // update count badges
-        [evt.from, evt.to].forEach(function(area) {
-          var panel = area.closest('.sc-flowzone-panel');
-          if (panel) {
-            panel.querySelector('.sc-flowzone-count').textContent =
-              area.querySelectorAll('.sc-flowzone-item').length;
-          }
-        });
+        // update count badges for cross-zone moves
+        if (newZone !== fromZone) {
+          [evt.from, evt.to].forEach(function(area) {
+            var panel = area.closest('.sc-flowzone-panel');
+            if (panel) {
+              panel.querySelector('.sc-flowzone-count').textContent =
+                area.querySelectorAll('.sc-flowzone-item').length;
+            }
+          });
+        }
+
+        if (newZone === fromZone && ${JSON.stringify(!!position_field)}) {
+          // within-zone reorder — persist new order via position field
+          var ids = Array.from(evt.to.querySelectorAll('.sc-flowzone-item'))
+            .map(function(el) { return el.getAttribute('data-id'); });
+          fetch('/view/' + vn + '/reorder_zone', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'CSRF-Token': _sc_get_csrf_token(),
+            },
+            body: JSON.stringify({ zone: newZone, order: ids }),
+          })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.error) notifyAlert({ type: 'danger', text: data.error });
+            })
+            .catch(function() {
+              notifyAlert({ type: 'danger', text: 'Reorder failed' });
+            });
+          return;
+        }
 
         fetch('/view/' + vn + '/drop_item', {
           method: 'POST',
@@ -584,6 +628,39 @@ const drop_item = async (
   }
 };
 
+// ─── route: reorder_zone ─────────────────────────────────────────────────────
+
+const reorder_zone = async (
+  table_id,
+  _vn,
+  { position_field, min_role },
+  body,
+  { req }
+) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  if (!position_field)
+    return { json: { error: "No position field configured" } };
+
+  const { order } = body;
+  if (!Array.isArray(order))
+    return { json: { error: "Invalid order payload" } };
+
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+  try {
+    await Promise.all(
+      order.map((id, idx) =>
+        table.updateRow({ [position_field]: idx + 1 }, parseInt(id, 10), req.user)
+      )
+    );
+    return { json: { success: true } };
+  } catch (e) {
+    return { json: { error: e.message || "Reorder failed" } };
+  }
+};
+
 // ─── route: submit_zone ───────────────────────────────────────────────────────
 
 const submit_zone = async (
@@ -633,7 +710,7 @@ module.exports = {
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { drop_item, submit_zone },
+  routes: { drop_item, reorder_zone, submit_zone },
   getStringsForI18n() {
     return [];
   },
