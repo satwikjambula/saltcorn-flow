@@ -1,12 +1,4 @@
-const Table = require("@saltcorn/data/models/table");
-const View = require("@saltcorn/data/models/view");
-const Field = require("@saltcorn/data/models/field");
-const Form = require("@saltcorn/data/models/form");
-const Workflow = require("@saltcorn/data/models/workflow");
-const {
-  stateFieldsToWhere,
-  stateFieldsToQuery,
-} = require("@saltcorn/data/plugin-helper");
+const { scTable, scView, scField, scForm, scWorkflow, scHelper } = require("./_resolve");
 const {
   div,
   h5,
@@ -64,13 +56,17 @@ function priorityHtml(row, field) {
 
 // ─── configuration workflow ───────────────────────────────────────────────────
 
-const configuration_workflow = (req) =>
-  new Workflow({
+const configuration_workflow = (req) => {
+  const Workflow = scWorkflow();
+  return new Workflow({
     steps: [
       {
         name: req.__("Board settings"),
         form: async (context) => {
-          const table = Table.findOne(context.table_id);
+          const Table = scTable();
+          const View = scView();
+          const Form = scForm();
+          const table = Table.findOne({ id: parseInt(context.table_id, 10) });
           const fields = table.getFields();
 
           const groupable = fields.filter(
@@ -220,11 +216,14 @@ const configuration_workflow = (req) =>
       },
     ],
   });
+};
 
 // ─── state fields ─────────────────────────────────────────────────────────────
 
 const get_state_fields = async (table_id) => {
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const Field = scField();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   return table
     .getFields()
     .filter((f) => !f.primary_key)
@@ -254,7 +253,9 @@ const run = async (
   state,
   { req }
 ) => {
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const { stateFieldsToWhere, stateFieldsToQuery } = scHelper();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   const pk_name = table.pk_name;
   const fields = table.getFields();
 
@@ -498,7 +499,7 @@ const move_card = async (table_id, _vn, { group_field, min_role }, body, { req }
   if (!id || column === undefined)
     return { json: { error: "Missing id or column" } };
 
-  const table = Table.findOne(table_id);
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
   try {
     await table.updateRow({ [group_field]: column }, id, req.user);
     return { json: { success: true } };
@@ -516,6 +517,7 @@ const add_column = async (table_id, viewname, config, body, { req }) => {
   if (!column_name)
     return { json: { error: "Column name required" } };
 
+  const View = scView();
   const view = View.findOne({ name: viewname });
   if (!view) return { json: { error: "View not found" } };
 

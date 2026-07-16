@@ -1,11 +1,4 @@
-const Table = require("@saltcorn/data/models/table");
-const Field = require("@saltcorn/data/models/field");
-const Form = require("@saltcorn/data/models/form");
-const Workflow = require("@saltcorn/data/models/workflow");
-const {
-  stateFieldsToWhere,
-  stateFieldsToQuery,
-} = require("@saltcorn/data/plugin-helper");
+const { scTable, scField, scForm, scWorkflow, scHelper } = require("./_resolve");
 const {
   div,
   span,
@@ -59,13 +52,16 @@ function initials(name) {
 
 // ─── configuration workflow ───────────────────────────────────────────────────
 
-const configuration_workflow = (req) =>
-  new Workflow({
+const configuration_workflow = (req) => {
+  const Workflow = scWorkflow();
+  return new Workflow({
     steps: [
       {
         name: req.__("List settings"),
         form: async (context) => {
-          const table = Table.findOne(context.table_id);
+          const Table = scTable();
+          const Form = scForm();
+          const table = Table.findOne({ id: parseInt(context.table_id, 10) });
           const fields = table.getFields();
 
           const allFields = fields.filter((f) => !f.primary_key);
@@ -187,11 +183,14 @@ const configuration_workflow = (req) =>
       },
     ],
   });
+};
 
 // ─── state fields ─────────────────────────────────────────────────────────────
 
 const get_state_fields = async (table_id) => {
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const Field = scField();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   return table
     .getFields()
     .filter((f) => !f.primary_key)
@@ -220,7 +219,9 @@ const run = async (
   state,
   { req }
 ) => {
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const { stateFieldsToWhere, stateFieldsToQuery } = scHelper();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   const pk_name = table.pk_name;
   const fields = table.getFields();
 
@@ -450,7 +451,7 @@ const update_field = async (table_id, _vn, { min_role }, body, { req }) => {
   if (!id || !field)
     return { json: { error: "Missing id or field" } };
 
-  const table = Table.findOne(table_id);
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
   const tableFields = table.getFields();
   const fieldDef = tableFields.find((f) => f.name === field);
   if (!fieldDef)
@@ -476,7 +477,7 @@ const reorder = async (table_id, _vn, { position_field, min_role }, body, { req 
   if (!Array.isArray(order))
     return { json: { error: "Invalid order payload" } };
 
-  const table = Table.findOne(table_id);
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
   try {
     await Promise.all(
       order.map((id, idx) =>

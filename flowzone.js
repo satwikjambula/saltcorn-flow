@@ -1,11 +1,4 @@
-const Table = require("@saltcorn/data/models/table");
-const Field = require("@saltcorn/data/models/field");
-const Form = require("@saltcorn/data/models/form");
-const Workflow = require("@saltcorn/data/models/workflow");
-const {
-  stateFieldsToWhere,
-  stateFieldsToQuery,
-} = require("@saltcorn/data/plugin-helper");
+const { scTable, scField, scForm, scWorkflow, scHelper } = require("./_resolve");
 const {
   div,
   span,
@@ -41,13 +34,16 @@ function escHtml(str) {
 
 // ─── configuration workflow ───────────────────────────────────────────────────
 
-const configuration_workflow = (req) =>
-  new Workflow({
+const configuration_workflow = (req) => {
+  const Workflow = scWorkflow();
+  return new Workflow({
     steps: [
       {
         name: req.__("Zone settings"),
         form: async (context) => {
-          const table = Table.findOne(context.table_id);
+          const Table = scTable();
+          const Form = scForm();
+          const table = Table.findOne({ id: parseInt(context.table_id, 10) });
           const fields = table.getFields();
           const allFields = fields.filter((f) => !f.primary_key);
           const stringIntFields = allFields.filter(
@@ -152,11 +148,14 @@ const configuration_workflow = (req) =>
       },
     ],
   });
+};
 
 // ─── state fields ─────────────────────────────────────────────────────────────
 
 const get_state_fields = async (table_id) => {
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const Field = scField();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   return table
     .getFields()
     .filter((f) => !f.primary_key)
@@ -193,7 +192,9 @@ const run = async (
   }
 
   const zones = parseZones(cfg);
-  const table = Table.findOne(table_id);
+  const Table = scTable();
+  const { stateFieldsToWhere, stateFieldsToQuery } = scHelper();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
   const pk_name = table.pk_name;
   const fields = table.getFields();
 
@@ -405,7 +406,7 @@ const drop_item = async (
   if (id === undefined || zone === undefined)
     return { json: { error: "Missing id or zone" } };
 
-  const table = Table.findOne(table_id);
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
 
   // server-side max validation
   if (zone && zonesRaw && zone_max) {
