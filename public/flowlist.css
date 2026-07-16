@@ -20,6 +20,17 @@
   font-weight: 500;
 }
 
+.sc-flowlist-title-link {
+  font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sc-flowlist-title-link:hover {
+  text-decoration: underline;
+  color: var(--bs-primary, #0d6efd);
+}
+
 .sc-flowlist-status-select,
 .sc-flowlist-priority-select {
   min-width: 110px;

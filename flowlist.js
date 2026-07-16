@@ -1,4 +1,4 @@
-const { scTable, scField, scForm, scWorkflow, scHelper } = require("./_resolve");
+const { scTable, scField, scForm, scWorkflow, scHelper, scView } = require("./_resolve");
 const {
   div,
   span,
@@ -60,6 +60,7 @@ const configuration_workflow = (req) => {
         name: req.__("List settings"),
         form: async (context) => {
           const Table = scTable();
+          const View = scView();
           const Form = scForm();
           const table = Table.findOne({ id: parseInt(context.table_id, 10) });
           const fields = table.getFields();
@@ -164,6 +165,28 @@ const configuration_workflow = (req) => {
                 },
               },
               {
+                name: "show_view",
+                label: req.__("Row detail view"),
+                sublabel: req.__(
+                  "Optional: clicking the task title opens this view in a modal"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...(
+                      await View.find_table_views_where(
+                        context.table_id,
+                        ({ state_fields, viewrow }) =>
+                          viewrow.name !== context.viewname &&
+                          state_fields.some((sf) => sf.name === "id")
+                      )
+                    ).map((v) => v.select_option),
+                  ],
+                },
+              },
+              {
                 name: "min_role",
                 label: req.__("Minimum role to edit / reorder"),
                 type: "String",
@@ -214,6 +237,7 @@ const run = async (
     assignee_field,
     priority_field,
     position_field,
+    show_view,
     min_role,
   },
   state,
@@ -338,7 +362,16 @@ const run = async (
         : "",
       td(
         { class: "sc-flowlist-title-cell" },
-        span({ class: "sc-flowlist-title-text" }, text(String(row[title_field] ?? "")))
+        show_view
+          ? a(
+              {
+                href: "javascript:void(0)",
+                "data-sc-modal": `/view/${show_view}?id=${row[pk_name]}`,
+                class: "sc-flowlist-title-link",
+              },
+              text(String(row[title_field] ?? ""))
+            )
+          : span({ class: "sc-flowlist-title-text" }, text(String(row[title_field] ?? "")))
       ),
       showStatus ? td({ class: "sc-flowlist-status-cell" }, statusSelect(row)) : "",
       showPriority ? td({ class: "sc-flowlist-priority-cell" }, prioritySelect(row)) : "",
