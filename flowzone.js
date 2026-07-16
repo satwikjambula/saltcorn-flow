@@ -678,7 +678,8 @@ const submit_zone = async (
   if (zone === undefined || zone === null)
     return { json: { error: "Missing zone" } };
 
-  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+  const Table = scTable();
+  const table = Table.findOne({ id: parseInt(table_id, 10) });
 
   // empty string means the unassigned bin — query for null container value
   const zoneFilter =
@@ -689,16 +690,51 @@ const submit_zone = async (
     forPublic: !req.user,
   });
 
+  // ── expand one level of relation fields ────────────────────────────────────
+  const tableFields = table.getFields();
+  const relationFields = tableFields.filter(
+    (f) => f.type?.name === "Key" && f.reftable_name
+  );
+
+  const relCache = {};
+  for (const field of relationFields) {
+    relCache[field.name] = {};
+    const relTable = Table.findOne({ name: field.reftable_name });
+    if (!relTable) continue;
+    const uniq = [...new Set(rows.map((r) => r[field.name]).filter((v) => v != null))];
+    await Promise.all(
+      uniq.map(async (fkVal) => {
+        try {
+          const relRow = await relTable.getRow({ [relTable.pk_name]: fkVal });
+          if (relRow) relCache[field.name][fkVal] = relRow;
+        } catch (_) {}
+      })
+    );
+  }
+
+  const expandedRows = rows.map((row) => {
+    const out = { ...row };
+    for (const field of relationFields) {
+      const fkVal = row[field.name];
+      const relRow = fkVal != null ? relCache[field.name][fkVal] : null;
+      if (!relRow) continue;
+      for (const [k, v] of Object.entries(relRow)) {
+        out[`${field.name}__${k}`] = v;
+      }
+    }
+    return out;
+  });
+
   if (submit_action_name && typeof table.runTriggers === "function") {
     await table.runTriggers(
       submit_action_name,
-      { zone, rows, count: rows.length },
+      { zone, rows: expandedRows, count: expandedRows.length },
       null,
       req.user
     );
   }
 
-  return { json: { success: true, zone, count: rows.length, rows } };
+  return { json: { success: true, zone, count: expandedRows.length, rows: expandedRows } };
 };
 
 // ─── export ───────────────────────────────────────────────────────────────────
