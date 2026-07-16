@@ -154,8 +154,13 @@ A drag-and-drop zone board for categorising items into named buckets — e.g. a 
 | Max items per zone | — | Comma-separated max item counts per zone (0 = unlimited), e.g. `0,5,1` |
 | Card title field | ✅ | Field shown as the item label on each card |
 | Card subtitle field | — | Optional second field shown below the title |
+| Card detail view | — | Optional: clicking a card opens this view in a modal |
 | Show unassigned bin | — | Show items with no container value in an Unassigned zone above the grid |
 | Minimum role to drag items | — | Lowest role that can move items between zones (default: User) |
+| Zones with a Submit button | — | Comma-separated zone names — each gets a Submit button in its header |
+| Submit button label | — | Text on each Submit button (default: "Submit") |
+| Submit trigger name | — | Saltcorn trigger "When" name fired on submit — create a Custom trigger with this value; it receives `{ zone, rows, count }` |
+| Minimum role to submit | — | Lowest role that can click Submit (defaults to same as drag role) |
 
 ### Features
 
@@ -164,7 +169,26 @@ A drag-and-drop zone board for categorising items into named buckets — e.g. a 
 - Optional max-item limit: drop is blocked client-side and validated server-side
 - Unassigned bin for items not yet placed in any zone
 - Fires Saltcorn `Update` triggers after every successful drop — business rules apply automatically
+- **Submit zone contents** — each configured zone gets a Submit button; clicking it POSTs all rows currently in that zone to the server as JSON and fires a named Saltcorn trigger
 - Ghost card while dragging with smooth 150 ms animation
+
+### Submit zone contents — how it works
+
+When a Submit button is clicked the plugin calls `POST /view/{name}/submit_zone` with `{ zone }`. The server re-fetches every row in that zone from the database (respecting row-level permissions) and returns:
+
+```json
+{ "success": true, "zone": "cart", "count": 3, "rows": [ { "id": 1, "name": "Item A", "zone": "cart" }, ... ] }
+```
+
+If **Submit trigger name** is set (e.g. `CartSubmit`) Saltcorn fires that trigger before responding. Create a Custom trigger on the same table with `When = CartSubmit` and attach a Webhook, JavaScript, or any other action — the trigger row contains `{ zone, rows, count }`.
+
+This pattern covers loyalty-program and gamification scenarios where business rules depend on the full composition of a zone (e.g. "award a badge when the cart contains 3+ items from the same category") without any custom route code.
+
+**Example trigger setup:**
+1. Go to **Tables → {your table} → Edit → Triggers → Add trigger**
+2. Set When = `CartSubmit` (must match Submit trigger name exactly)
+3. Set Action = Webhook, URL = `https://your-backend.com/process-cart`
+4. The webhook receives the full rows array — parse it with custom code
 
 ### Example table setup
 

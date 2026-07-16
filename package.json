@@ -1,6 +1,6 @@
 {
   "name": "saltcorn-flow",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Asana-style project and task management plugin for Saltcorn",
   "main": "index.js",
   "keywords": [

@@ -4,6 +4,7 @@ const {
   span,
   small,
   a,
+  button,
   script,
   domReady,
   text,
@@ -166,6 +167,47 @@ const configuration_workflow = (req) => {
                   ],
                 },
               },
+              {
+                name: "submit_zones",
+                label: req.__("Zones with a Submit button"),
+                sublabel: req.__(
+                  "Comma-separated zone names — each listed zone gets a Submit button in its header. Leave blank to disable."
+                ),
+                type: "String",
+                required: false,
+              },
+              {
+                name: "submit_label",
+                label: req.__("Submit button label"),
+                sublabel: req.__('Text shown on each Submit button (default: "Submit")'),
+                type: "String",
+                required: false,
+              },
+              {
+                name: "submit_action_name",
+                label: req.__("Submit trigger name"),
+                sublabel: req.__(
+                  'Saltcorn trigger "When" name fired on submit. Create a Custom trigger on this table with a matching "When" value — it receives { zone, rows, count }. Leave blank to return rows as JSON only.'
+                ),
+                type: "String",
+                required: false,
+              },
+              {
+                name: "submit_min_role",
+                label: req.__("Minimum role to submit"),
+                sublabel: req.__("Lowest role that can click Submit (defaults to same as drag role)"),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("(same as drag role)"), value: "" },
+                    { name: "1", label: req.__("Admin") },
+                    { name: "40", label: req.__("Staff") },
+                    { name: "80", label: req.__("User") },
+                    { name: "100", label: req.__("Public") },
+                  ],
+                },
+              },
             ],
           });
         },
@@ -207,6 +249,10 @@ const run = async (
     show_view,
     show_unassigned,
     min_role,
+    submit_zones: submitZonesRaw,
+    submit_label,
+    submit_action_name,
+    submit_min_role,
   } = cfg || {};
 
   if (!container_field || !zonesRaw) {
@@ -233,6 +279,12 @@ const run = async (
 
   const role = req.user ? req.user.role_id : 100;
   const canDrag = role <= parseInt(min_role || "80", 10);
+  const canSubmit = role <= parseInt(submit_min_role || min_role || "80", 10);
+
+  const submitZoneSet = new Set(
+    (submitZonesRaw || "").split(",").map((s) => s.trim()).filter(Boolean)
+  );
+  const hasSubmitZones = submitZoneSet.size > 0;
 
   // ── group rows by container value ───────────────────────────────────────────
   const grouped = {};
@@ -297,6 +349,19 @@ const run = async (
         ? span({ class: "sc-flowzone-max-label small opacity-75" }, `max ${zone.max}`)
         : "";
 
+    const submitBtn =
+      hasSubmitZones && submitZoneSet.has(zone.name) && canSubmit
+        ? button(
+            {
+              class: "btn btn-sm btn-light sc-flowzone-submit-btn py-0 px-2",
+              "data-zone": zone.name,
+              "data-viewname": viewname,
+              title: req.__("Submit zone contents to server"),
+            },
+            text(submit_label || "Submit")
+          )
+        : "";
+
     return div(
       { class: "sc-flowzone-panel card" },
       div(
@@ -310,7 +375,8 @@ const run = async (
           span(
             { class: "badge bg-white text-dark sc-flowzone-count" },
             String(items.length)
-          )
+          ),
+          submitBtn
         )
       ),
       div(
@@ -362,15 +428,16 @@ const run = async (
     )
   );
 
-  if (!canDrag) return boardHtml;
+  if (!canDrag && !(hasSubmitZones && canSubmit)) return boardHtml;
 
-  // ── drag script ─────────────────────────────────────────────────────────────
-  const dragScript = script(
+  // ── interaction script ───────────────────────────────────────────────────────
+  const interactionScript = script(
     domReady(`
 (function() {
   var board = document.getElementById(${JSON.stringify(boardId)});
   if (!board) return;
 
+  ${canDrag ? `
   board.querySelectorAll('.sc-flowzone-drop-area').forEach(function(area) {
     new Sortable(area, {
       group: ${JSON.stringify(boardId)},
@@ -422,11 +489,47 @@ const run = async (
       },
     });
   });
+  ` : ""}
+
+  ${hasSubmitZones && canSubmit ? `
+  board.querySelectorAll('.sc-flowzone-submit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var zone = btn.getAttribute('data-zone');
+      var vn = btn.getAttribute('data-viewname');
+      var origText = btn.textContent.trim();
+      btn.disabled = true;
+      btn.textContent = '…';
+      fetch('/view/' + vn + '/submit_zone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': _sc_get_csrf_token(),
+        },
+        body: JSON.stringify({ zone: zone }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = origText;
+          if (data.error) {
+            notifyAlert({ type: 'danger', text: data.error });
+          } else {
+            notifyAlert({ type: 'success', text: origText + ': ' + data.count + ' item(s) submitted' });
+          }
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = origText;
+          notifyAlert({ type: 'danger', text: 'Submit failed' });
+        });
+    });
+  });
+  ` : ""}
 })();
 `)
   );
 
-  return boardHtml + dragScript;
+  return boardHtml + interactionScript;
 };
 
 // ─── route: drop_item ─────────────────────────────────────────────────────────
@@ -481,6 +584,46 @@ const drop_item = async (
   }
 };
 
+// ─── route: submit_zone ───────────────────────────────────────────────────────
+
+const submit_zone = async (
+  table_id,
+  _vn,
+  { container_field, submit_action_name, submit_min_role, min_role },
+  body,
+  { req }
+) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(submit_min_role || min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  const { zone } = body;
+  if (zone === undefined || zone === null)
+    return { json: { error: "Missing zone" } };
+
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+
+  // empty string means the unassigned bin — query for null container value
+  const zoneFilter =
+    zone === "" ? { [container_field]: null } : { [container_field]: zone };
+
+  const rows = await table.getRows(zoneFilter, {
+    forUser: req.user,
+    forPublic: !req.user,
+  });
+
+  if (submit_action_name && typeof table.runTriggers === "function") {
+    await table.runTriggers(
+      submit_action_name,
+      { zone, rows, count: rows.length },
+      null,
+      req.user
+    );
+  }
+
+  return { json: { success: true, zone, count: rows.length, rows } };
+};
+
 // ─── export ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -490,7 +633,7 @@ module.exports = {
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { drop_item },
+  routes: { drop_item, submit_zone },
   getStringsForI18n() {
     return [];
   },

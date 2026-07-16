@@ -65,3 +65,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+.sc-flowzone-submit-btn {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.sc-flowzone-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
