@@ -6,6 +6,8 @@ const {
   domReady,
   a,
   i,
+  input,
+  button,
   select,
   option,
   table: tableTag,
@@ -286,6 +288,10 @@ const run = async (
 
   // ── header row ──────────────────────────────────────────────────────────────
   const headerRow = tr(
+    canEdit ? th(
+      { class: "sc-flowlist-check-th", style: "width:32px" },
+      input({ type: "checkbox", class: "sc-flowlist-select-all form-check-input" })
+    ) : "",
     canReorder ? th({ class: "sc-flowlist-handle-th", style: "width:32px" }, "") : "",
     th({ class: "sc-flowlist-title-th" }, req.__("Task")),
     showStatus ? th({ class: "sc-flowlist-status-th", style: "width:150px" }, req.__("Status")) : "",
@@ -354,6 +360,16 @@ const run = async (
         class: "sc-flowlist-row",
         "data-id": String(row[pk_name]),
       },
+      canEdit
+        ? td(
+            { class: "sc-flowlist-check-td" },
+            input({
+              type: "checkbox",
+              class: "sc-flowlist-row-check form-check-input",
+              value: String(row[pk_name]),
+            })
+          )
+        : "",
       canReorder
         ? td(
             { class: "sc-flowlist-handle text-muted", title: "Drag to reorder" },
@@ -407,6 +423,13 @@ const run = async (
     );
   };
 
+  // ── bulk toolbar fields ──────────────────────────────────────────────────────
+  const bulkFields = [];
+  if (showStatus && status_field)
+    bulkFields.push({ name: status_field, label: "Status", opts: statusOpts });
+  if (showPriority && priority_field)
+    bulkFields.push({ name: priority_field, label: "Priority", opts: ["Urgent","High","Medium","Low"] });
+
   const listId = `sc-flowlist-${viewname.replace(/\W/g, "_")}`;
 
   const listHtml = div(
@@ -425,6 +448,48 @@ const run = async (
     ? div(
         { class: "alert alert-warning py-1 px-2 mb-2 small" },
         `FlowList: position field "${position_field}" does not exist on this table — drag-to-reorder is disabled. Reconfigure the view to fix this.`
+      )
+    : "";
+
+  // ── bulk action toolbar ──────────────────────────────────────────────────────
+  const bulkToolbar = canEdit && bulkFields.length > 0
+    ? div(
+        {
+          class: "sc-flowlist-bulk-bar d-none d-flex align-items-center gap-2 p-2 border rounded bg-light mt-2",
+          id: `${listId}-bulk`,
+        },
+        span({ class: "sc-flowlist-bulk-count small fw-semibold text-muted me-2" }, "0 selected"),
+        select(
+          { class: "form-select form-select-sm sc-flowlist-bulk-field", style: "width:auto" },
+          option({ value: "" }, req.__("— field —")),
+          ...bulkFields.map((f) =>
+            option({ value: f.name, "data-opts": f.opts.join(",") }, f.label)
+          )
+        ),
+        select(
+          {
+            class: "form-select form-select-sm sc-flowlist-bulk-value",
+            style: "width:auto",
+            disabled: "disabled",
+          },
+          option({ value: "" }, req.__("— value —"))
+        ),
+        button(
+          {
+            type: "button",
+            class: "btn btn-sm btn-primary sc-flowlist-bulk-apply",
+            "data-viewname": viewname,
+            disabled: "disabled",
+          },
+          req.__("Apply")
+        ),
+        button(
+          {
+            type: "button",
+            class: "btn btn-sm btn-outline-secondary sc-flowlist-bulk-deselect",
+          },
+          req.__("Clear")
+        )
       )
     : "";
 
@@ -493,6 +558,79 @@ const run = async (
     el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
   });
 
+  // ── bulk actions ──────────────────────────────────────────────────────────
+  var bulkBar = document.getElementById(${JSON.stringify(listId + "-bulk")});
+  if (bulkBar) {
+    var selectAll = listEl.querySelector('.sc-flowlist-select-all');
+    var bulkCount = bulkBar.querySelector('.sc-flowlist-bulk-count');
+    var bulkField = bulkBar.querySelector('.sc-flowlist-bulk-field');
+    var bulkValue = bulkBar.querySelector('.sc-flowlist-bulk-value');
+    var bulkApply = bulkBar.querySelector('.sc-flowlist-bulk-apply');
+    var bulkDesel = bulkBar.querySelector('.sc-flowlist-bulk-deselect');
+
+    function getChecked() {
+      return Array.from(listEl.querySelectorAll('.sc-flowlist-row-check:checked'));
+    }
+
+    function refreshBulkBar() {
+      var checked = getChecked();
+      if (checked.length > 0) {
+        bulkBar.classList.remove('d-none');
+        bulkCount.textContent = checked.length + ' selected';
+      } else {
+        bulkBar.classList.add('d-none');
+        if (selectAll) selectAll.checked = false;
+      }
+    }
+
+    listEl.querySelectorAll('.sc-flowlist-row-check').forEach(function(chk) {
+      chk.addEventListener('change', refreshBulkBar);
+    });
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        listEl.querySelectorAll('.sc-flowlist-row-check').forEach(function(chk) {
+          chk.checked = selectAll.checked;
+        });
+        refreshBulkBar();
+      });
+    }
+
+    bulkField.addEventListener('change', function() {
+      var opts = (bulkField.options[bulkField.selectedIndex].getAttribute('data-opts') || '').split(',').filter(Boolean);
+      bulkValue.innerHTML = '<option value="">— value —</option>' +
+        opts.map(function(o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
+      bulkValue.disabled = opts.length === 0;
+      bulkApply.disabled = bulkField.value === '' || bulkValue.value === '';
+    });
+
+    bulkValue.addEventListener('change', function() {
+      bulkApply.disabled = bulkField.value === '' || bulkValue.value === '';
+    });
+
+    bulkApply.addEventListener('click', function() {
+      var ids = getChecked().map(function(chk) { return chk.value; });
+      if (!ids.length || !bulkField.value || !bulkValue.value) return;
+      bulkApply.disabled = true;
+      var vn = bulkApply.getAttribute('data-viewname');
+      fetch('/view/' + vn + '/bulk_update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CSRF-Token': _sc_get_csrf_token() },
+        body: JSON.stringify({ ids: ids, field: bulkField.value, value: bulkValue.value }),
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        bulkApply.disabled = false;
+        if (data.error) notifyAlert({ type: 'danger', text: data.error });
+        else location.reload();
+      }).catch(function() { bulkApply.disabled = false; });
+    });
+
+    bulkDesel.addEventListener('click', function() {
+      listEl.querySelectorAll('.sc-flowlist-row-check').forEach(function(chk) { chk.checked = false; });
+      if (selectAll) selectAll.checked = false;
+      refreshBulkBar();
+    });
+  }
+
   ${canReorder ? `
   // drag-to-reorder rows
   var tbody = listEl.querySelector('.sc-flowlist-tbody');
@@ -523,7 +661,7 @@ const run = async (
 `)
   );
 
-  return posWarn + listHtml + editorScript;
+  return posWarn + listHtml + bulkToolbar + editorScript;
 };
 
 // ─── routes ───────────────────────────────────────────────────────────────────
@@ -576,6 +714,33 @@ const reorder = async (table_id, _vn, { position_field, min_role }, body, { req 
   }
 };
 
+const bulk_update = async (table_id, _vn, { status_field, priority_field, min_role }, body, { req }) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  const { ids, field, value } = body;
+  if (!Array.isArray(ids) || !ids.length || !field || value === undefined)
+    return { json: { error: "Missing ids, field, or value" } };
+
+  // only allow updating the configured editable fields
+  const allowed = [status_field, priority_field].filter(Boolean);
+  if (!allowed.includes(field))
+    return { json: { error: "Field not allowed for bulk update" } };
+
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+  try {
+    await Promise.all(
+      ids.map((id) =>
+        table.updateRow({ [field]: value || null }, parseInt(id, 10), req.user)
+      )
+    );
+    return { json: { success: true, updated: ids.length } };
+  } catch (e) {
+    return { json: { error: e.message || "Bulk update failed" } };
+  }
+};
+
 // ─── export ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -585,6 +750,6 @@ module.exports = {
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { update_field, reorder },
+  routes: { update_field, reorder, bulk_update },
   getStringsForI18n() { return []; },
 };
