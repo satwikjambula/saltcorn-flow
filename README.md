@@ -37,22 +37,22 @@ Every view works with the same table. Create all six views on one `tasks` table 
 ## Screenshots
 
 ### FlowBoard
-![FlowBoard](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowboard.png)
+<img width="1497" height="379" alt="FlowBoard" src="https://github.com/user-attachments/assets/2a9b952a-46f1-452a-871f-6d5d1cab4138" />
 
 ### FlowList
-![FlowList](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowlist.png)
+<img width="1498" height="486" alt="FlowList" src="https://github.com/user-attachments/assets/5efd3510-a2ae-448a-908f-9dcf33bcb76a" />
 
 ### FlowZone
-![FlowZone](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowzone.png)
+<img width="1495" height="445" alt="FlowZone" src="https://github.com/user-attachments/assets/f81058e8-bdc4-40ac-a21b-77c184c1ad39" />
 
 ### FlowMatrix
-![FlowMatrix](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowmatrix.png)
+<img width="1490" height="442" alt="FlowMatrix" src="https://github.com/user-attachments/assets/1f904462-6ba4-40cc-8e0a-90ea837f6302" />
 
 ### FlowCalendar
-![FlowCalendar](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowcalendar.png)
+<img width="1499" height="538" alt="FlowCalendar" src="https://github.com/user-attachments/assets/ef0db3cb-e391-4e78-a5f3-d732c58fc287" />
 
 ### FlowTimeline
-![FlowTimeline](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowtimeline.png)
+<img width="1505" height="466" alt="FlowTimeline" src="https://github.com/user-attachments/assets/edf048b0-29c0-4955-8c41-b3c7be85d8f4" />
 
 ---
 
