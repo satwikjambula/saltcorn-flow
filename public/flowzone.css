@@ -66,6 +66,33 @@
   }
 }
 
+/* sidebar layout */
+.sc-flowzone-board--sidebar {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sc-flowzone-sidebar {
+  flex: 0 0 220px;
+  min-width: 0;
+}
+
+.sc-flowzone-board--sidebar .sc-flowzone-grid {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .sc-flowzone-board--sidebar {
+    flex-direction: column;
+  }
+  .sc-flowzone-sidebar {
+    flex: none;
+    width: 100%;
+  }
+}
+
 .sc-flowzone-submit-btn {
   font-size: 0.72rem;
   line-height: 1.25;

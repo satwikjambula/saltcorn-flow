@@ -164,7 +164,16 @@ const configuration_workflow = (req) => {
                 name: "show_unassigned",
                 label: req.__("Show unassigned bin"),
                 sublabel: req.__(
-                  "Show items with no container value in an Unassigned zone at the top"
+                  "Show items with no container value in an Unassigned zone"
+                ),
+                type: "Bool",
+                required: false,
+              },
+              {
+                name: "unassigned_sidebar",
+                label: req.__("Unassigned bin as sidebar"),
+                sublabel: req.__(
+                  "When enabled, the unassigned bin appears as a collapsible sidebar panel to the left of the zone grid instead of at the top"
                 ),
                 type: "Bool",
                 required: false,
@@ -273,6 +282,7 @@ const run = async (
     card_subtitle_field,
     show_view,
     show_unassigned,
+    unassigned_sidebar,
     min_role,
     position_field,
     clear_zones: clearZonesRaw,
@@ -440,41 +450,67 @@ const run = async (
   };
 
   // ── unassigned bin ──────────────────────────────────────────────────────────
-  const unassignedHtml = show_unassigned
-    ? div(
-        { class: "sc-flowzone-panel sc-flowzone-unassigned card" },
-        div(
-          {
-            class:
-              "card-header sc-flowzone-header bg-light d-flex justify-content-between align-items-center",
-          },
-          span({ class: "fw-semibold text-muted" }, "Unassigned"),
-          span(
-            { class: "badge bg-secondary sc-flowzone-count" },
-            String(unassigned.length)
+  const unassignedPanelHtml = (extraClass) =>
+    show_unassigned
+      ? div(
+          { class: `sc-flowzone-panel sc-flowzone-unassigned card ${extraClass || ""}` },
+          div(
+            {
+              class:
+                "card-header sc-flowzone-header bg-light d-flex justify-content-between align-items-center",
+            },
+            span({ class: "fw-semibold text-muted" }, "Unassigned"),
+            span(
+              { class: "badge bg-secondary sc-flowzone-count" },
+              String(unassigned.length)
+            )
+          ),
+          div(
+            {
+              class: "sc-flowzone-drop-area p-2",
+              "data-zone": "",
+              "data-viewname": viewname,
+            },
+            ...unassigned.map(cardHtml)
           )
-        ),
-        div(
-          {
-            class: "sc-flowzone-drop-area p-2",
-            "data-zone": "",
-            "data-viewname": viewname,
-          },
-          ...unassigned.map(cardHtml)
         )
-      )
-    : "";
+      : "";
 
   const boardId = `sc-flowzone-${viewname.replace(/\W/g, "_")}`;
 
-  const boardHtml = div(
-    { class: "sc-flowzone-board", id: boardId },
-    unassignedHtml,
-    div(
-      { class: "sc-flowzone-grid" },
-      ...zones.map((z) => zoneHtml(z, grouped[z.name] || []))
-    )
+  const gridHtml = div(
+    { class: "sc-flowzone-grid" },
+    ...zones.map((z) => zoneHtml(z, grouped[z.name] || []))
   );
+
+  let boardHtml;
+  if (show_unassigned && unassigned_sidebar) {
+    // sidebar layout: unassigned panel on the left, zones grid on the right
+    boardHtml = div(
+      { class: "sc-flowzone-board sc-flowzone-board--sidebar", id: boardId },
+      div(
+        { class: "sc-flowzone-sidebar" },
+        div(
+          {
+            class: "sc-flowzone-sidebar-toggle btn btn-sm btn-outline-secondary mb-2 w-100",
+            "data-target": `${boardId}-sidebar-body`,
+          },
+          "⊟ Unassigned"
+        ),
+        div(
+          { id: `${boardId}-sidebar-body` },
+          unassignedPanelHtml("")
+        )
+      ),
+      gridHtml
+    );
+  } else {
+    boardHtml = div(
+      { class: "sc-flowzone-board", id: boardId },
+      unassignedPanelHtml(""),
+      gridHtml
+    );
+  }
 
   if (!canDrag && !(hasSubmitZones && canSubmit) && !(hasClearZones)) return boardHtml;
 
@@ -560,6 +596,19 @@ const run = async (
           })
           .catch(function() { location.reload(); });
       },
+    });
+  });
+  ` : ""}
+
+  ${unassigned_sidebar ? `
+  // sidebar collapse toggle
+  board.querySelectorAll('.sc-flowzone-sidebar-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      if (!target) return;
+      var hidden = target.style.display === 'none';
+      target.style.display = hidden ? '' : 'none';
+      btn.textContent = (hidden ? '⊟' : '⊞') + ' Unassigned';
     });
   });
   ` : ""}
