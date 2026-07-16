@@ -184,6 +184,15 @@ const configuration_workflow = (req) => {
                 },
               },
               {
+                name: "clear_zones",
+                label: req.__("Zones with a Clear button"),
+                sublabel: req.__(
+                  "Comma-separated zone names — each listed zone gets a Clear button that sets all items' container field to null (unassigned)."
+                ),
+                type: "String",
+                required: false,
+              },
+              {
                 name: "submit_zones",
                 label: req.__("Zones with a Submit button"),
                 sublabel: req.__(
@@ -266,6 +275,7 @@ const run = async (
     show_unassigned,
     min_role,
     position_field,
+    clear_zones: clearZonesRaw,
     submit_zones: submitZonesRaw,
     submit_label,
     submit_action_name,
@@ -304,6 +314,11 @@ const run = async (
     (submitZonesRaw || "").split(",").map((s) => s.trim()).filter(Boolean)
   );
   const hasSubmitZones = submitZoneSet.size > 0;
+
+  const clearZoneSet = new Set(
+    (clearZonesRaw || "").split(",").map((s) => s.trim()).filter(Boolean)
+  );
+  const hasClearZones = clearZoneSet.size > 0;
 
   // ── group rows by container value ───────────────────────────────────────────
   const grouped = {};
@@ -381,6 +396,19 @@ const run = async (
           )
         : "";
 
+    const clearBtn =
+      hasClearZones && clearZoneSet.has(zone.name) && canDrag
+        ? button(
+            {
+              class: "btn btn-sm btn-outline-light sc-flowzone-clear-btn py-0 px-2",
+              "data-zone": zone.name,
+              "data-viewname": viewname,
+              title: req.__("Clear all items from this zone"),
+            },
+            "✕"
+          )
+        : "";
+
     return div(
       { class: "sc-flowzone-panel card" },
       div(
@@ -395,7 +423,8 @@ const run = async (
             { class: "badge bg-white text-dark sc-flowzone-count" },
             String(items.length)
           ),
-          submitBtn
+          submitBtn,
+          clearBtn
         )
       ),
       div(
@@ -447,7 +476,7 @@ const run = async (
     )
   );
 
-  if (!canDrag && !(hasSubmitZones && canSubmit)) return boardHtml;
+  if (!canDrag && !(hasSubmitZones && canSubmit) && !(hasClearZones)) return boardHtml;
 
   // ── interaction script ───────────────────────────────────────────────────────
   const interactionScript = script(
@@ -531,6 +560,38 @@ const run = async (
           })
           .catch(function() { location.reload(); });
       },
+    });
+  });
+  ` : ""}
+
+  ${hasClearZones && canDrag ? `
+  board.querySelectorAll('.sc-flowzone-clear-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var zone = btn.getAttribute('data-zone');
+      var vn = btn.getAttribute('data-viewname');
+      if (!confirm('Clear all items from zone "' + zone + '"?')) return;
+      btn.disabled = true;
+      fetch('/view/' + vn + '/clear_zone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': _sc_get_csrf_token(),
+        },
+        body: JSON.stringify({ zone: zone }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          if (data.error) {
+            notifyAlert({ type: 'danger', text: data.error });
+          } else {
+            location.reload();
+          }
+        })
+        .catch(function() {
+          btn.disabled = false;
+          notifyAlert({ type: 'danger', text: 'Clear failed' });
+        });
     });
   });
   ` : ""}
@@ -625,6 +686,44 @@ const drop_item = async (
     return { json: { success: true } };
   } catch (e) {
     return { json: { error: e.message || "Drop failed" } };
+  }
+};
+
+// ─── route: clear_zone ────────────────────────────────────────────────────────
+
+const clear_zone = async (
+  table_id,
+  _vn,
+  { container_field, clear_zones: clearZonesRaw, min_role },
+  body,
+  { req }
+) => {
+  const role = req.user ? req.user.role_id : 100;
+  if (role > parseInt(min_role || "80", 10))
+    return { json: { error: "Not authorized" } };
+
+  const { zone } = body;
+  if (!zone)
+    return { json: { error: "Missing zone" } };
+
+  // only allow clearing zones that are configured as clearable
+  const allowed = new Set(
+    (clearZonesRaw || "").split(",").map((s) => s.trim()).filter(Boolean)
+  );
+  if (!allowed.has(zone))
+    return { json: { error: "Zone is not configured for clearing" } };
+
+  const table = scTable().findOne({ id: parseInt(table_id, 10) });
+  try {
+    const rows = await table.getRows({ [container_field]: zone });
+    await Promise.all(
+      rows.map((row) =>
+        table.updateRow({ [container_field]: null }, row[table.pk_name], req.user)
+      )
+    );
+    return { json: { success: true, cleared: rows.length } };
+  } catch (e) {
+    return { json: { error: e.message || "Clear failed" } };
   }
 };
 
@@ -746,7 +845,7 @@ module.exports = {
   configuration_workflow,
   run,
   get_state_fields,
-  routes: { drop_item, reorder_zone, submit_zone },
+  routes: { drop_item, clear_zone, reorder_zone, submit_zone },
   getStringsForI18n() {
     return [];
   },
