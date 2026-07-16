@@ -1,400 +1,551 @@
 # saltcorn-flow
 
-Asana-style project and task management plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
+**Six drag-and-drop view templates for [Saltcorn](https://github.com/saltcorn/saltcorn) — turn any database table into a kanban board, task list, zone bucket, priority matrix, monthly calendar, or Gantt timeline in minutes. No code required.**
 
-Adds **six view templates** to any table — kanban boards, task lists, zone buckets, 2-D matrices, monthly calendars, and Gantt timelines. All views share a common drag-and-drop interaction model powered by [SortableJS](https://sortablejs.com).
+---
+
+## What is saltcorn-flow?
+
+Saltcorn is a no-code platform where you build apps by creating tables and attaching views to them. `saltcorn-flow` adds six new view templates to the platform — all focused on project and task management:
+
+| Template | Best for |
+|---|---|
+| **FlowBoard** | Moving tasks through stages (kanban) |
+| **FlowList** | Reviewing and editing many tasks at once |
+| **FlowZone** | Categorising items into named buckets |
+| **FlowMatrix** | Visualising tasks on two axes (e.g. priority × status) |
+| **FlowCalendar** | Seeing what is due when, month by month |
+| **FlowTimeline** | Planning work across a date range (Gantt) |
+
+Every view works with the same table. Create all six views on one `tasks` table and switch between them depending on what you need to see.
+
+---
+
+## Which view should I use?
+
+| I want to… | Use |
+|---|---|
+| Move tasks through stages like Trello | **FlowBoard** |
+| See all tasks in a list and edit them fast | **FlowList** |
+| Let users drag items into a cart / basket / bucket | **FlowZone** |
+| Visualise tasks by priority AND status at the same time | **FlowMatrix** |
+| See what is due this month and drag tasks to new dates | **FlowCalendar** |
+| Plan sprints or projects with start and end dates | **FlowTimeline** |
 
 ---
 
 ## Screenshots
 
-### FlowBoard — Kanban Board
+### FlowBoard
+![FlowBoard](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowboard.png)
 
-![FlowBoard kanban board with draggable cards, priority badges, due dates and assignee avatars](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowboard.png)
+### FlowList
+![FlowList](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowlist.png)
 
-### FlowList — Flat Task List
+### FlowZone
+![FlowZone](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowzone.png)
 
-![FlowList flat task list with inline status and priority dropdowns, search bar, bulk edit toolbar](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowlist.png)
+### FlowMatrix
+![FlowMatrix](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowmatrix.png)
 
-### FlowZone — Drop Zone Board
+### FlowCalendar
+![FlowCalendar](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowcalendar.png)
 
-![FlowZone configurable drop zones with colour-coded headers, item counts and submit buttons](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowzone.png)
-
-### FlowMatrix — 2-D Grid
-
-![FlowMatrix 2-D grid placing cards at the intersection of two categorical axes]()
-
-### FlowCalendar — Monthly Calendar
-
-![FlowCalendar monthly calendar with colour-coded event chips and drag-to-reschedule]()
-
-### FlowTimeline — Gantt Timeline
-
-![FlowTimeline Gantt timeline with colour-coded bars and drag-to-reschedule]()
----
-
-## Table of Contents
-
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [FlowBoard](#flowboard)
-- [FlowList](#flowlist)
-- [FlowZone](#flowzone)
-- [FlowMatrix](#flowmatrix)
-- [FlowCalendar](#flowcalendar)
-- [FlowTimeline](#flowtimeline)
-- [Testing locally](#testing-locally)
-- [License](#license)
-
----
-
-## Requirements
-
-- **Saltcorn** v1.0.0 or later
+### FlowTimeline
+![FlowTimeline](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowtimeline.png)
 
 ---
 
 ## Installation
 
-### From the plugin store
+### Option A — Plugin store (recommended)
 
-1. Go to **Settings → Plugins → Plugin Store**
-2. Search for `saltcorn-flow`
-3. Click **Install**
+1. In Saltcorn go to **Settings → Plugins → Plugin Store**
+2. Search for `saltcorn-flow` and click **Install**
+3. Done — the six view templates appear immediately in **Views → Add view**
 
-### From npm
+### Option B — npm
 
 ```bash
-npm install saltcorn-flow
+npm install -g saltcorn-flow
 ```
 
-Then in Saltcorn: **Settings → Plugins → Install from npm** → enter `saltcorn-flow`.
+Then in Saltcorn: **Settings → Plugins → Install from npm** → type `saltcorn-flow` → Install.
 
 ---
 
-## FlowBoard
+## Quick start (5 minutes)
 
-A kanban board that groups rows into columns by any field value. Cards can be dragged between columns to update the database instantly.
+This walks you through creating one table and one FlowBoard view so you can see the plugin working before reading the full docs.
 
-### Configuration
+### 1. Create the table
 
-| Field | Required | Description |
-|---|---|---|
-| Group-by field | ✅ | String or Integer field whose value determines the column (e.g. `status`, `stage`) |
-| Column order | — | Comma-separated list of column names in display order, e.g. `To Do,In Progress,Done` |
-| Card title field | ✅ | Field shown as the card heading |
-| Due date field | — | Date field — cards show a coloured due date badge (red if overdue, yellow if ≤ 3 days) |
-| Assignee field | — | String field — shown as a circular avatar with the first two characters |
-| Priority field | — | String field — values `Urgent`/`High` → danger badge; `Medium` → warning; `Low` → secondary |
-| WIP limits | — | Comma-separated max card counts per column, e.g. `0,3,0` (0 = unlimited) |
-| Position field | — | Integer field — enables within-column drag-to-reorder |
-| Card detail view | — | Show view opened in a modal when a card is clicked |
-| Use view to create | — | Create view linked from an **Add card** button at the bottom of each column |
-| Minimum role to move cards | — | Lowest role that can drag cards (default: User) |
+Go to **Tables → Add table**, name it `tasks`, then add these fields:
 
-### Features
-
-- Drag cards between columns — group-by field updated immediately
-- Within-column drag-to-reorder when position field is configured
-- **WIP limits** — column header turns red when the limit is reached; drops are blocked server-side
-- Card count badge per column
-- Colour-coded due date badge, circular assignee avatar, priority badge
-- **Add column** widget at the right end of the board — type a name and click + to append
-- **Search bar** — live filter cards by title across all columns
-- Optional card-click modal and per-column Add card button
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `title` | String | Card title field |
-| `status` | String | Group-by field (values: `To Do`, `In Progress`, `Done`) |
-| `due_date` | Date | Due date field |
-| `assignee` | String | Assignee field (e.g. `Alice`, `Bob`) |
-| `priority` | String | Priority field (values: `Urgent`, `High`, `Medium`, `Low`) |
-| `position` | Integer | Position field (within-column order) |
-
----
-
-## FlowList
-
-A flat, sortable task list displayed as a table. Status and priority can be edited inline. Bulk-edit lets you change a field on multiple rows at once. Rows can be dragged to reorder if a position field is configured.
-
-### Configuration
-
-| Field | Required | Description |
-|---|---|---|
-| Title field | ✅ | Field shown in the first column as the task name |
-| Status field | — | String field — rendered as an inline `<select>` dropdown |
-| Status options | — | Comma-separated list of valid status values |
-| Due date field | — | Date field — shown with colour coding (red if overdue, yellow if ≤ 3 days) |
-| Assignee field | — | String field — shown as a circular avatar |
-| Priority field | — | String field — rendered as an inline `<select>` with badge-coloured options |
-| Editable fields | — | Comma-separated additional fields editable via bulk toolbar |
-| Position field | — | Integer field — enables drag-to-reorder |
-| Show view | — | Show view opened as a modal when the title is clicked |
-| Minimum role to edit / reorder | — | Lowest role that can change fields or drag rows (default: User) |
-
-### Features
-
-- **Inline status and priority editing** — saves to DB immediately without page refresh
-- **Bulk edit toolbar** — select multiple rows with checkboxes, pick a field and value, click Apply
-- **Drag-to-reorder** — drag handle column; positions saved in bulk when dropped
-- **Clickable title** — optional Show view opens in a modal for full record details
-- **Inline title edit** — click the title text to edit in place (press Enter to save, Escape to cancel)
-- **Search bar** — live filter rows by title text
-- Due date colour coding and assignee avatars consistent with FlowBoard
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `title` | String | Title field |
-| `status` | String | Status field (values: `Open`, `In Progress`, `Done`) |
-| `priority` | String | Priority field (values: `Urgent`, `High`, `Medium`, `Low`) |
-| `due_date` | Date | Due date field |
-| `assignee` | String | Assignee field |
-| `position` | Integer | Position field (drag-to-reorder) |
-
----
-
-## FlowZone
-
-A drag-and-drop zone board for categorising items into named buckets — e.g. a product wishlist, a shopping cart, or a pipeline stage view. Each zone gets a coloured header, item count badge, and optional max-item cap enforced on both client and server.
-
-### Configuration
-
-| Field | Required | Description |
-|---|---|---|
-| Container field | ✅ | String or Integer field updated when an item is dropped into a zone |
-| Zone names | ✅ | Comma-separated zone identifiers, e.g. `wishlist,cart,purchased` |
-| Zone display labels | — | Comma-separated display names (same order), e.g. `Wishlist,My Cart,Purchased` |
-| Zone colors | — | Comma-separated Bootstrap colour names per zone: `primary`, `success`, `warning`, `danger`, `info`, `secondary` |
-| Max items per zone | — | Comma-separated max item counts (0 = unlimited), e.g. `0,5,1` |
-| Position field | — | Integer field — enables drag-to-reorder within a zone |
-| Card title field | ✅ | Field shown as the item label |
-| Card subtitle field | — | Optional second line below the title |
-| Card detail view | — | Clicking a card opens this view in a modal |
-| Show unassigned bin | — | Show items with no container value above the grid (toggleable sidebar) |
-| Clear zones | — | Comma-separated zone names that get a **Clear** button in the header |
-| Zones with a Submit button | — | Comma-separated zone names that get a **Submit** button |
-| Submit button label | — | Text on the Submit button (default: `Submit`) |
-| Submit trigger name | — | Saltcorn trigger "When" name fired on submit; receives `{ zone, rows, count }` |
-| Minimum role to drag | — | Lowest role that can drag items (default: User) |
-| Minimum role to submit | — | Lowest role that can click Submit |
-
-### Features
-
-- Responsive CSS grid — zones reflow automatically
-- Per-zone colour-coded headers with item count badges
-- **WIP limits** — header turns red at cap; drops blocked client + server-side
-- **Within-zone reorder** — drag rows up/down when position field is set
-- **Unassigned sidebar** — collapsible panel showing unplaced items; opens with a toggle button
-- **Clear button** — removes all items from the zone (sets container field to null)
-- **Submit zone** — collects all rows in a zone and fires a named Saltcorn trigger; useful for order checkout, form submission, or approval flows
-- Ghost card while dragging, smooth 150 ms animation
-
-### Submit zone — how it works
-
-When Submit is clicked the plugin POSTs `{ zone }` to the server, re-fetches every row in that zone (respecting row permissions), and fires the configured trigger:
-
-```json
-{ "success": true, "zone": "cart", "count": 3, "rows": [ { "id": 1, ... }, ... ] }
-```
-
-Create a Custom trigger on the table with `When = <your trigger name>` and attach a Webhook or JavaScript action.
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `name` | String | Card title field |
-| `description` | String | Card subtitle field |
-| `zone` | String | Container field (values: `wishlist`, `cart`, `purchased`) |
-| `position` | Integer | Position field (within-zone order) |
-
----
-
-## FlowMatrix
-
-A 2-D grid view that places cards at the intersection of two categorical field values — like an Eisenhower priority-vs-effort matrix or a status-by-assignee board. Cards can be dragged between cells to update both axis fields simultaneously.
-
-### Configuration
-
-| Field | Required | Description |
-|---|---|---|
-| X axis field | ✅ | String or Integer field mapped to columns |
-| X axis values | ✅ | Comma-separated column values left → right, e.g. `Low,Medium,High,Urgent` |
-| X axis label | — | Header label shown above the columns |
-| Y axis field | ✅ | String or Integer field mapped to rows |
-| Y axis values | ✅ | Comma-separated row values top → bottom, e.g. `To Do,In Progress,Done` |
-| Y axis label | — | Label shown to the left of the rows |
-| Card title field | — | Field shown as the card heading inside each cell |
-| Card subtitle field | — | Optional second line on each card |
-| Card detail view | — | Clicking a card opens this view in a modal |
-| Minimum role to drag cards | — | Lowest role that can drag cards (default: User) |
-
-### Features
-
-- CSS Grid layout — columns auto-size to fill the available width
-- Drag a card to any cell — both axis fields updated in a single DB write
-- Cards with values outside the configured axis lists appear in the nearest cell
-- Column and row count badges on each header
-- Optional click-to-modal for full record details
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `title` | String | Card title field |
-| `priority` | String | X axis field (values: `Low`, `Medium`, `High`, `Urgent`) |
-| `status` | String | Y axis field (values: `To Do`, `In Progress`, `Done`) |
-| `assignee` | String | Card subtitle field |
-
----
-
-## FlowCalendar
-
-A monthly calendar view. Items appear as coloured chips on the day matching their date field. Chips can be dragged to a different day to reschedule — the date field is updated instantly.
-
-### Configuration
-
-| Field | Required | Description |
-|---|---|---|
-| Date field | ✅ | Date field used to place items on the calendar |
-| Event title field | ✅ | Field shown as the event label |
-| Color field | — | String field — values `Urgent`/`danger` → red; `High`/`warning` → yellow; `Medium`/`info` → blue; `Low`/`secondary` → grey; `Done`/`success` → green |
-| Event detail view | — | Clicking an event opens this view in a modal |
-| Minimum role to drag events | — | Lowest role that can drag to reschedule (default: User) |
-
-### Navigation
-
-Use the `‹` / `›` arrows to switch months, or pass `?_cal_year=2026&_cal_month=6` in the URL (month is 0-indexed).
-
-### Features
-
-- Full month grid with Sun–Sat headers
-- Today highlighted in the grid
-- Colour-coded event chips (Bootstrap badge colours) — `Urgent` → danger, `High` → warning, `Medium` → info, `Low` → secondary, `Done` → success
-- Drag an event chip to any day cell to reschedule — server validates the date format before writing
-- Optional click-to-modal for full record details
-- Timezone-safe date matching — uses local calendar day, not UTC midnight
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `title` | String | Event title field |
-| `due_date` | Date | Date field |
-| `priority` | String | Color field (values: `Urgent`, `High`, `Medium`, `Low`) |
-
----
-
-## FlowTimeline
-
-A Gantt-style horizontal timeline. Each row is a record; coloured bars span from the start date to the end date within a configurable day window. Bars can be dragged left or right to shift both dates simultaneously.
-
-### Configuration
-
-| Field | Required | Description |
-|---|---|---|
-| Start date field | ✅ | Date field for the bar's left edge |
-| End date field | ✅ | Date field for the bar's right edge |
-| Label field | ✅ | Field shown to the left of the bar as the row label |
-| Color field | — | String field — same colour mapping as FlowCalendar |
-| Window (days) | — | Number of days to show in the grid (default: 21) |
-| Bar detail view | — | Clicking a bar opens this view in a modal |
-| Minimum role to drag bars | — | Lowest role that can drag to reschedule (default: User) |
-
-### Navigation
-
-Click `‹` / `›` to shift the window by the configured number of days, or pass `?_tl_start=YYYY-MM-DD` in the URL.
-
-### Features
-
-- Horizontal bar spans `grid-column: colStart / colEnd` — pure CSS, no canvas
-- Colour-coded bars — same mapping as FlowCalendar (`Urgent` → red, `High` → yellow, `Medium` → blue, `Low` → grey)
-- **Drag-to-reschedule** — uses mouse events (not SortableJS) for horizontal pixel-to-day dragging; both start and end fields updated atomically
-- Tooltip on hover shows task name, start → end dates
-- Server validates `start < end` and both date formats before writing
-- Today highlighted in the day header
-- Window navigation arrows
-
-### Example table setup
-
-| Field | Type | Used for |
-|---|---|---|
-| `title` | String | Label field |
-| `start_date` | Date | Start date field |
-| `end_date` | Date | End date field |
-| `priority` | String | Color field (values: `Urgent`, `High`, `Medium`, `Low`) |
-
----
-
-## Testing locally
-
-### Prerequisites
-
-- Node.js 18+
-- Saltcorn installed globally: `npm install -g @saltcorn/cli`
-
-### Step 1 — Clone the plugin
-
-```bash
-git clone https://github.com/satwikjambula/saltcorn-flow
-cd saltcorn-flow
-npm install
-```
-
-### Step 2 — Register with your local Saltcorn instance
-
-```bash
-saltcorn install-plugin -d /absolute/path/to/saltcorn-flow
-```
-
-> If the command silently fails, insert directly:
-> ```bash
-> sqlite3 ~/Library/Application\ Support/saltcorn/scdb.sqlite \
->   "INSERT OR REPLACE INTO _sc_plugins (name, source, location) \
->    VALUES ('saltcorn-flow', 'local', '/absolute/path/to/saltcorn-flow');"
-> ```
-
-### Step 3 — Start the server
-
-```bash
-saltcorn serve
-```
-
-### Step 4 — Create a test table
-
-Go to **Tables → Add table** and create a table with these fields:
-
-| Field | Type |
+| Field name | Type |
 |---|---|
 | `title` | String |
 | `status` | String |
 | `priority` | String |
-| `zone` | String |
 | `assignee` | String |
 | `due_date` | Date |
-| `start_date` | Date |
-| `end_date` | Date |
-| `position` | Integer |
 
-Add a handful of rows with varied status, priority, and date values.
+### 2. Add some rows
 
-### Step 5 — Create views
+Go to **Tables → tasks → Edit rows** and add 4–6 rows. Use these values so the board looks good:
 
-For each view template, go to **Views → Add view**, pick the table and template, configure the fields, and click Save. All six templates are available immediately after the plugin is installed:
+- `status`: `To Do`, `In Progress`, or `Done`
+- `priority`: `Urgent`, `High`, `Medium`, or `Low`
+- `assignee`: any first name (e.g. `Alice`, `Bob`)
+- `due_date`: various dates
 
-| Template | Key fields to configure |
+### 3. Create a FlowBoard view
+
+1. Go to **Views → Add view**
+2. Name: `task-board` · Template: **FlowBoard** · Table: **tasks**
+3. Click **Configure**
+4. Set **Group-by field** = `status`
+5. Set **Column order** = `To Do,In Progress,Done`
+6. Set **Card title field** = `title`
+7. Set **Priority field** = `priority`
+8. Set **Due date field** = `due_date`
+9. Set **Assignee field** = `assignee`
+10. Set **Minimum role to move cards** = `Public`
+11. Click **Finish**
+
+Open the view — you will see three columns with your tasks as cards. Drag a card to another column; the status field in the database updates instantly.
+
+---
+
+## FlowBoard — Kanban Board
+
+A board that groups rows into columns by any field value. Drag cards between columns to update the database. Add new columns directly from the board.
+
+### How it works
+
+Each unique value in the **Group-by field** becomes a column. Drag a card to a different column and the group-by field on that row is updated to the new column's value. The card count badge on each column header updates in real time.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `title` | String | Card heading |
+| `status` | String | Group-by field — each value becomes a column |
+| `priority` | String | (Optional) colour badge: `Urgent`/`High`/`Medium`/`Low` |
+| `due_date` | Date | (Optional) coloured due date on the card |
+| `assignee` | String | (Optional) circular avatar from the first two letters |
+| `position` | Integer | (Optional) enables drag-to-reorder within a column |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| Group-by field | `status` | ✅ |
+| Column order | `To Do,In Progress,Done` | — |
+| Card title field | `title` | ✅ |
+| Due date field | `due_date` | — |
+| Assignee field | `assignee` | — |
+| Priority field | `priority` | — |
+| WIP limits | e.g. `0,3,0` — max cards per column (0 = no limit) | — |
+| Position field | `position` | — |
+| Card detail view | name of a Show view on the same table | — |
+| Use view to create | name of an Edit/New view on the same table | — |
+| Minimum role to move cards | `Public` / `User` / `Staff` / `Admin` | — |
+
+### Features in detail
+
+**Drag between columns** — drop a card on any column; the group-by field is updated server-side.
+
+**WIP limits** — set a maximum number of cards per column. The column header turns red when the limit is reached, and the drop is blocked on both the client and the server. Configure as a comma-separated list matching the column order, e.g. `0,3,0` means no limit on "To Do", max 3 on "In Progress", no limit on "Done".
+
+**Within-column reorder** — add an Integer field (e.g. `position`) to your table, select it as the Position field, and cards can be dragged up and down within a column. Order is saved in a single bulk update.
+
+**Add column** — a text input + button at the right end of the board lets any authorised user add a new column by typing its name. The new column value is appended to the column order in the view config.
+
+**Search bar** — a filter input above the board hides cards whose title does not match the typed text. Counts on column headers update to reflect the filtered count.
+
+**Card badges** — priority badge colour: `Urgent` → red, `High` → yellow, `Medium` → blue, `Low` → grey. Due date badge: red if past due, yellow if due within 3 days, grey otherwise.
+
+**Card detail modal** — set Card detail view to a Show view and clicking any card opens it in a Saltcorn modal overlay.
+
+---
+
+## FlowList — Flat Task List
+
+A table view where every row is a task. Status and priority can be changed via inline dropdowns. Multiple rows can be edited at once with the bulk toolbar. Rows can be dragged to reorder.
+
+### How it works
+
+Rows are displayed as a sortable table. Clicking a dropdown in the Status or Priority column saves the new value immediately — no Save button needed. Selecting rows with checkboxes reveals the bulk edit toolbar, which lets you apply a value to all selected rows at once.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `title` | String | Row label (first column) |
+| `status` | String | Inline status dropdown |
+| `priority` | String | Inline priority dropdown with colour badges |
+| `due_date` | Date | Coloured due date |
+| `assignee` | String | Circular avatar |
+| `position` | Integer | (Optional) enables drag-to-reorder |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| Title field | `title` | ✅ |
+| Status field | `status` | — |
+| Status options | `To Do,In Progress,Done` | — |
+| Priority field | `priority` | — |
+| Due date field | `due_date` | — |
+| Assignee field | `assignee` | — |
+| Editable fields | `status,priority` | — |
+| Position field | `position` | — |
+| Show view | name of a Show view for modal on title click | — |
+| Minimum role to edit | `Public` / `User` / `Staff` / `Admin` | — |
+
+### Features in detail
+
+**Inline status and priority editing** — each cell is a `<select>` that POSTs the change on blur. No page reload.
+
+**Bulk edit** — tick any number of rows, pick a field and new value from the toolbar, click Apply. Useful for closing a sprint, reassigning tasks, or mass-changing priority.
+
+**Drag-to-reorder** — a drag handle appears on the left of each row when a position field is configured. Drop order is saved in one bulk request.
+
+**Inline title edit** — click any title to edit it in place. Press Enter to save, Escape to cancel.
+
+**Clickable title modal** — if a Show view is configured, the title becomes a link that opens the full record in a Saltcorn modal.
+
+**Search / filter bar** — live text filter above the table. Hides rows that do not match.
+
+---
+
+## FlowZone — Drop Zone Board
+
+A board of named zones (buckets). Drag items between zones to update a field. Ideal for wish lists, shopping carts, intake pipelines, or any "drag-to-categorise" use case.
+
+### How it works
+
+Items sit in zones based on the value of their **container field**. Dragging an item to a different zone sets the container field to that zone's name. Items with no container value appear in the Unassigned bin.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `name` | String | Card title |
+| `description` | String | (Optional) subtitle below the title |
+| `zone` | String | Container field — stores which zone the item is in |
+| `position` | Integer | (Optional) enables reorder within a zone |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| Container field | `zone` | ✅ |
+| Zone names | `wishlist,current,completed` | ✅ |
+| Zone display labels | `Wishlist,Current Sprint,Completed` | — |
+| Zone colors | `secondary,primary,success` | — |
+| Max items per zone | `0,5,0` | — |
+| Position field | `position` | — |
+| Card title field | `name` | ✅ |
+| Card subtitle field | `description` | — |
+| Show unassigned bin | on | — |
+| Clear zones | `completed` | — |
+| Zones with a Submit button | `current` | — |
+| Submit button label | `Send to review` | — |
+| Submit trigger name | `SprintSubmit` | — |
+| Minimum role to drag | `Public` | — |
+
+### Features in detail
+
+**Drag between zones** — drop an item on any zone header or drop area; the container field is updated.
+
+**WIP limits** — the zone header turns red and further drops are blocked when the limit is reached.
+
+**Within-zone reorder** — configure a position field to enable drag-to-reorder inside a zone.
+
+**Unassigned bin** — a collapsible panel above the main grid shows all items where the container field is empty. Click the toggle arrow to show or hide it. On mobile it collapses to a sidebar.
+
+**Clear button** — add a zone name to Clear zones and a Clear button appears in that zone's header. Clicking it sets the container field to null for every item in that zone.
+
+**Submit button** — add a zone name to Zones with a Submit button and a Submit button appears in the zone header. Clicking it:
+1. Re-fetches every row currently in that zone (respecting row-level permissions)
+2. Fires the named Saltcorn trigger with `{ zone, rows, count }` as the payload
+3. Returns the full rows array to the client
+
+**How to set up a Submit trigger:**
+1. Go to **Tables → your table → Triggers → Add trigger**
+2. Set **When** to the same value as Submit trigger name (e.g. `SprintSubmit`)
+3. Set **Action** to Webhook, JavaScript, or any Saltcorn action
+4. The trigger receives `{ zone: "current", count: 5, rows: [...] }` — parse it to run your business logic
+
+This pattern is useful for: placing an order, submitting a sprint for review, sending a batch for processing, or triggering any workflow once a user has finished assembling items in a zone.
+
+---
+
+## FlowMatrix — 2-D Priority Grid
+
+A grid view that maps rows to cells at the intersection of two field values. Drag a card to any cell to update both fields at once.
+
+### How it works
+
+You configure two categorical fields — one for columns (X axis) and one for rows (Y axis). Every item appears in the cell matching its current X and Y values. Dragging a card to a different cell writes both the X field and the Y field in a single update.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `title` | String | Card heading |
+| `priority` | String | X axis field |
+| `status` | String | Y axis field |
+| `assignee` | String | (Optional) card subtitle |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| X axis field | `priority` | ✅ |
+| X axis values | `Low,Medium,High,Urgent` | ✅ |
+| X axis label | `Priority` | — |
+| Y axis field | `status` | ✅ |
+| Y axis values | `To Do,In Progress,Done` | ✅ |
+| Y axis label | `Status` | — |
+| Card title field | `title` | — |
+| Card subtitle field | `assignee` | — |
+| Card detail view | name of a Show view | — |
+| Minimum role to drag | `Public` | — |
+
+### Features in detail
+
+**2-D drag and drop** — drag any card to a different cell; both the X field and Y field are updated together in one server call.
+
+**Responsive grid** — columns are distributed evenly across the available width using CSS Grid.
+
+**Cards outside the axis** — items whose field values are not in the configured axis lists are ignored and will not appear on the matrix. Make sure all existing values are included in the axis value lists.
+
+**Use cases** — Eisenhower matrix (urgency × importance), backlog grooming (effort × value), QA sign-off board (severity × status), team capacity view (assignee × sprint).
+
+---
+
+## FlowCalendar — Monthly Calendar
+
+A calendar view showing items as chips on their due date. Drag a chip to another day to reschedule.
+
+### How it works
+
+Each row with a non-empty date field appears as a coloured chip on the matching calendar day. The colour comes from a second field you choose (e.g. priority). Drag a chip to a different day cell and the date field is updated.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `title` | String | Event label on the chip |
+| `due_date` | Date | Date field — determines which day the chip appears on |
+| `priority` | String | (Optional) colour field |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| Date field | `due_date` | ✅ |
+| Event title field | `title` | ✅ |
+| Color field | `priority` | — |
+| Event detail view | name of a Show view | — |
+| Minimum role to drag events | `Public` | — |
+
+**Colour mapping for the color field:**
+
+| Field value | Chip colour |
 |---|---|
-| **FlowBoard** | group-by = `status`, title = `title` |
-| **FlowList** | title = `title`, status = `status`, position = `position` |
-| **FlowZone** | container = `zone`, zones = `wishlist,current,completed` |
-| **FlowMatrix** | x = `priority` (values `Low,Medium,High,Urgent`), y = `status` (values `To Do,In Progress,Done`) |
-| **FlowCalendar** | date = `due_date`, title = `title`, color = `priority` |
-| **FlowTimeline** | start = `start_date`, end = `end_date`, label = `title`, color = `priority` |
+| `Urgent` or `danger` | Red |
+| `High` or `warning` | Yellow |
+| `Medium` or `info` | Blue |
+| `Low` or `secondary` | Grey |
+| `Done` or `success` | Green |
+| `In Progress` or `primary` | Dark blue |
+
+### Features in detail
+
+**Month navigation** — use the `‹` / `›` arrows to go back or forward one month. You can also link directly to a specific month: add `?_cal_year=2026&_cal_month=6` to the view URL (month is 0-indexed, so 6 = July).
+
+**Today highlight** — the current day cell has a blue background so it is easy to find.
+
+**Drag to reschedule** — drag any chip to a different day. The server validates the date before writing. Items outside the displayed month cannot be dropped on padding cells.
+
+**Click to open** — if an Event detail view is configured, clicking a chip opens the full record in a Saltcorn modal.
+
+**Timezone safe** — date matching uses the local calendar day, not UTC midnight, so chips appear on the correct day regardless of the server or browser timezone.
+
+---
+
+## FlowTimeline — Gantt Timeline
+
+A horizontal bar chart showing each row as a bar spanning from its start date to its end date. Drag a bar left or right to shift both dates by the same number of days.
+
+### How it works
+
+Each row with both a start date and an end date appears as a coloured bar in its own row. The bar is positioned using CSS Grid — no canvas or SVG. Drag a bar horizontally to shift the task; the number of days dragged is added to both the start and end fields so the duration stays the same.
+
+### Step-by-step setup
+
+**Table fields you need:**
+
+| Field | Type | Purpose |
+|---|---|---|
+| `title` | String | Row label (shown left of the bar) |
+| `start_date` | Date | Left edge of the bar |
+| `end_date` | Date | Right edge of the bar |
+| `priority` | String | (Optional) colour field |
+
+**View configuration:**
+
+| Setting | What to enter | Required |
+|---|---|---|
+| Start date field | `start_date` | ✅ |
+| End date field | `end_date` | ✅ |
+| Label field | `title` | ✅ |
+| Color field | `priority` | — |
+| Window (days) | `21` (default) | — |
+| Bar detail view | name of a Show view | — |
+| Minimum role to drag bars | `Public` | — |
+
+**Colour mapping** — same as FlowCalendar: `Urgent` → red, `High` → yellow, `Medium` → blue, `Low` → grey, `Done` → green.
+
+### Features in detail
+
+**Window navigation** — use `‹` / `›` to shift the window by the number of days configured. Link directly to a date with `?_tl_start=2026-07-01`.
+
+**Drag to reschedule** — click and drag a bar left or right. A tooltip shows the original dates while dragging. On mouse-up, both start and end fields are updated (duration preserved). The server validates that start < end before writing.
+
+**Hover tooltip** — hovering over a bar shows the task name plus the start → end date range.
+
+**Today marker** — the current day column header is highlighted.
+
+**Bars outside the window** — tasks whose date range falls completely outside the window are still listed as rows (with no bar). Navigate to their date range to see the bar.
+
+**Partial bars** — tasks that start before the window or end after it are clipped at the window edges and still show the visible portion.
+
+---
+
+## Configuration reference
+
+All configuration fields for all six views in one place.
+
+### FlowBoard
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `group_field` | String field | — | Column grouping field |
+| `column_order` | Text | — | Comma-separated column names |
+| `card_title_field` | Any field | — | Card heading |
+| `due_date_field` | Date field | — | Due date badge |
+| `assignee_field` | String field | — | Avatar (first 2 chars) |
+| `priority_field` | String field | — | Priority badge |
+| `wip_limits` | Text | — | Comma-separated max counts per column |
+| `position_field` | Integer field | — | Within-column ordering |
+| `show_view` | View name | — | Detail modal on card click |
+| `create_view` | View name | — | Add card button per column |
+| `min_role` | Role | User | Who can drag cards |
+
+### FlowList
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `title_field` | Any field | — | Row label |
+| `status_field` | String field | — | Inline status dropdown |
+| `status_options` | Text | — | Comma-separated options |
+| `priority_field` | String field | — | Inline priority dropdown |
+| `due_date_field` | Date field | — | Due date badge |
+| `assignee_field` | String field | — | Avatar |
+| `editable_fields` | Text | — | Fields available in bulk toolbar |
+| `position_field` | Integer field | — | Drag-to-reorder |
+| `show_view` | View name | — | Modal on title click |
+| `min_role` | Role | User | Who can edit |
+
+### FlowZone
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `container_field` | String/Int field | — | Field written on drop |
+| `zones` | Text | — | Comma-separated zone names |
+| `zone_labels` | Text | — | Display names (same order) |
+| `zone_colors` | Text | — | Bootstrap colours (same order) |
+| `max_items` | Text | — | Max per zone (0 = unlimited) |
+| `position_field` | Integer field | — | Within-zone ordering |
+| `card_title_field` | Any field | — | Card heading |
+| `card_subtitle_field` | Any field | — | Card subtitle |
+| `show_view` | View name | — | Detail modal |
+| `unassigned_sidebar` | Boolean | off | Show unassigned bin |
+| `clear_zones` | Text | — | Zones with a Clear button |
+| `submit_zones` | Text | — | Zones with a Submit button |
+| `submit_label` | Text | Submit | Submit button label |
+| `submit_trigger` | Text | — | Trigger name to fire on submit |
+| `min_role` | Role | User | Who can drag |
+| `min_role_submit` | Role | (same) | Who can submit |
+
+### FlowMatrix
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `x_field` | String/Int field | — | Column axis field |
+| `x_values` | Text | — | Comma-separated column values |
+| `x_label` | Text | — | Column axis header |
+| `y_field` | String/Int field | — | Row axis field |
+| `y_values` | Text | — | Comma-separated row values |
+| `y_label` | Text | — | Row axis label |
+| `card_title_field` | Any field | — | Card heading |
+| `card_subtitle_field` | Any field | — | Card subtitle |
+| `show_view` | View name | — | Detail modal |
+| `min_role` | Role | User | Who can drag |
+
+### FlowCalendar
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `date_field` | Date field | — | Field that places the event on a day |
+| `title_field` | Any field | — | Event chip label |
+| `color_field` | String field | — | Chip colour (see colour mapping) |
+| `show_view` | View name | — | Detail modal on chip click |
+| `min_role` | Role | User | Who can drag to reschedule |
+
+### FlowTimeline
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `start_field` | Date field | — | Bar left edge |
+| `end_field` | Date field | — | Bar right edge |
+| `label_field` | Any field | — | Row label |
+| `color_field` | String field | — | Bar colour (see colour mapping) |
+| `window_days` | Integer | 21 | Days shown in the grid |
+| `show_view` | View name | — | Detail modal on bar click |
+| `min_role` | Role | User | Who can drag to reschedule |
+
+---
+
+## Colour mapping (FlowCalendar and FlowTimeline)
+
+Both views translate the colour field value to a Bootstrap colour using this map:
+
+| Field value | Bootstrap colour | Appearance |
+|---|---|---|
+| `Urgent` | `danger` | Red |
+| `High` | `warning` | Yellow |
+| `Medium` | `info` | Blue |
+| `Low` | `secondary` | Grey |
+| `Done` | `success` | Green |
+| `In Progress` | `primary` | Dark blue |
+| `To Do` | `light` | Light grey |
+| Any Bootstrap name directly | (used as-is) | — |
 
 ---
 
