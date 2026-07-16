@@ -1,0 +1,84 @@
+.sc-flowmatrix-wrapper {
+  overflow-x: auto;
+}
+
+.sc-flowmatrix-board {
+  display: flex;
+  flex-direction: column;
+  min-width: max-content;
+}
+
+/* Each row (x-header + data rows) uses grid to align columns */
+.sc-flowmatrix-x-header,
+.sc-flowmatrix-row {
+  display: grid;
+  grid-template-columns: 100px repeat(var(--sc-matrix-cols, 2), minmax(160px, 1fr));
+  gap: 0;
+}
+
+.sc-flowmatrix-corner {
+  /* empty top-left corner cell */
+}
+
+.sc-flowmatrix-x-label {
+  border-left: 1px solid var(--bs-border-color, #dee2e6);
+  background: var(--bs-light, #f8f9fa);
+  padding: 4px 8px;
+}
+
+.sc-flowmatrix-y-label {
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  min-height: 120px;
+  font-size: 0.85rem;
+  padding-right: 8px;
+  color: var(--bs-secondary, #6c757d);
+}
+
+.sc-flowmatrix-cell {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-right: none;
+  border-bottom: none;
+  min-height: 120px;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.sc-flowmatrix-cell:last-child {
+  border-right: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowmatrix-row:last-child .sc-flowmatrix-cell {
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowmatrix-row:last-child .sc-flowmatrix-y-label {
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowmatrix-cell.sortable-over {
+  background: rgba(13, 110, 253, 0.05);
+}
+
+.sc-flowmatrix-card {
+  font-size: 0.85rem;
+  transition: box-shadow 0.15s;
+}
+
+.sc-flowmatrix-draggable {
+  cursor: grab;
+}
+
+.sc-flowmatrix-draggable:active {
+  cursor: grabbing;
+}
+
+.sc-flowmatrix-ghost {
+  opacity: 0.35;
+}
+
+.sc-flowmatrix-x-axis-label,
+.sc-flowmatrix-y-axis-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
