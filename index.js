@@ -24,7 +24,11 @@ module.exports = {
       css: `/plugins/public/saltcorn-flow@${version}/flowmatrix.css`,
       onlyViews: ["FlowMatrix"],
     },
+    {
+      css: `/plugins/public/saltcorn-flow@${version}/flowcalendar.css`,
+      onlyViews: ["FlowCalendar"],
+    },
   ],
-  viewtemplates: [require("./kanban"), require("./flowlist"), require("./flowzone"), require("./flowmatrix")],
+  viewtemplates: [require("./kanban"), require("./flowlist"), require("./flowzone"), require("./flowmatrix"), require("./flowcalendar")],
   ready_for_mobile: false,
 };

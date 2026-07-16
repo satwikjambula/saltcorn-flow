@@ -1,0 +1,89 @@
+.sc-flowcal-wrapper {
+  user-select: none;
+}
+
+.sc-flowcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  border-left: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowcal-dow-header {
+  border: none;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowcal-dow {
+  padding: 4px;
+}
+
+.sc-flowcal-day {
+  border-right: 1px solid var(--bs-border-color, #dee2e6);
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  min-height: 90px;
+  padding: 4px;
+  background: #fff;
+  transition: background 0.12s;
+}
+
+.sc-flowcal-day--empty {
+  background: var(--bs-light, #f8f9fa);
+  min-height: 90px;
+  border-right: 1px solid var(--bs-border-color, #dee2e6);
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.sc-flowcal-day--today {
+  background: rgba(13, 110, 253, 0.04);
+}
+
+.sc-flowcal-day-num {
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+
+.sc-flowcal-events {
+  min-height: 20px;
+}
+
+.sc-flowcal-events.sortable-over {
+  background: rgba(13, 110, 253, 0.06);
+  border-radius: 3px;
+}
+
+.sc-flowcal-chip {
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: default;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sc-flowcal-chip[data-sc-modal] {
+  cursor: pointer;
+}
+
+.sc-flowcal-ghost {
+  opacity: 0.35;
+}
+
+.sc-flowcal-nav-btn {
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 10px;
+}
+
+@media (max-width: 576px) {
+  .sc-flowcal-day {
+    min-height: 60px;
+    padding: 2px;
+  }
+  .sc-flowcal-chip {
+    font-size: 0.6rem;
+  }
+}
