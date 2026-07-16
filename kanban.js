@@ -197,6 +197,15 @@ const configuration_workflow = (req) => {
                 },
               },
               {
+                name: "wip_limits",
+                label: req.__("WIP limits per column"),
+                sublabel: req.__(
+                  "Comma-separated max card counts matching Column order (0 = unlimited), e.g. 0,3,1"
+                ),
+                type: "String",
+                required: false,
+              },
+              {
                 name: "min_role",
                 label: req.__("Minimum role to move / add columns"),
                 type: "String",
@@ -248,6 +257,7 @@ const run = async (
     priority_field,
     show_view,
     view_to_create,
+    wip_limits,
     min_role,
   },
   state,
@@ -299,6 +309,14 @@ const run = async (
       grouped[val] = [row];
       if (!columns.includes(val)) columns.push(val);
     }
+  }
+
+  // ── WIP limit map: column name → max (0 = unlimited) ──────────────────────
+  const wipLimitMap = {};
+  if (wip_limits && column_order) {
+    const limitArr = wip_limits.split(",").map((s) => parseInt(s.trim(), 10) || 0);
+    const colArr = column_order.split(",").map((s) => s.trim());
+    colArr.forEach((col, i) => { wipLimitMap[col] = limitArr[i] || 0; });
   }
 
   const role = req.user ? req.user.role_id : 100;
@@ -368,14 +386,24 @@ const run = async (
   };
 
   // ── column HTML ─────────────────────────────────────────────────────────────
-  const columnHtml = (col) =>
-    div(
+  const columnHtml = (col) => {
+    const wipMax = wipLimitMap[col] || 0;
+    const wipAttr = wipMax > 0 ? { "data-max": String(wipMax) } : {};
+    const wipLabel = wipMax > 0
+      ? span({ class: "sc-flow-wip-label small opacity-75 me-1" }, `max ${wipMax}`)
+      : "";
+    const count = (grouped[col] || []).length;
+    const countColor = wipMax > 0 && count >= wipMax ? "bg-danger" : "bg-secondary";
+
+    return div(
       { class: "sc-kanban-column card" },
       div(
         { class: "sc-kanban-col-header card-header d-flex justify-content-between align-items-center" },
         span({ class: "fw-semibold" }, text(col)),
-        span({ class: "badge bg-secondary sc-kanban-count" },
-          String((grouped[col] || []).length)
+        div(
+          { class: "d-flex align-items-center gap-1" },
+          wipLabel,
+          span({ class: `badge ${countColor} sc-kanban-count` }, String(count))
         )
       ),
       div(
@@ -383,11 +411,13 @@ const run = async (
           class: "sc-kanban-cards p-2",
           "data-column": col,
           "data-viewname": viewname,
+          ...wipAttr,
         },
         ...(grouped[col] || []).map(cardHtml),
         addCardBtn(col)
       )
     );
+  };
 
   // ── add-column widget (only for users who can move) ─────────────────────────
   const addColWidget = canMove
@@ -435,6 +465,18 @@ const run = async (
       animation: 150,
       ghostClass: 'sc-kanban-ghost',
       filter: '.sc-flow-add-card',
+      onMove: function(evt) {
+        var target = evt.to;
+        var max = parseInt(target.getAttribute('data-max') || '0', 10);
+        if (max > 0) {
+          var count = target.querySelectorAll('.sc-kanban-card').length;
+          if (count >= max) {
+            notifyAlert({ type: 'warning', text: 'Column is at WIP limit (' + max + ')' });
+            return false;
+          }
+        }
+        return true;
+      },
       onEnd: function(evt) {
         var id = evt.item.getAttribute('data-id');
         var newCol = evt.to.getAttribute('data-column');
@@ -442,8 +484,12 @@ const run = async (
         if (!id || !newCol || !vn) return;
         [evt.from, evt.to].forEach(function(l) {
           var col = l.closest('.sc-kanban-column');
-          if (col) col.querySelector('.sc-kanban-count').textContent =
-            l.querySelectorAll('.sc-kanban-card').length;
+          if (!col) return;
+          var badge = col.querySelector('.sc-kanban-count');
+          var count = l.querySelectorAll('.sc-kanban-card').length;
+          var max = parseInt(l.getAttribute('data-max') || '0', 10);
+          badge.textContent = count;
+          badge.className = 'badge sc-kanban-count ' + (max > 0 && count >= max ? 'bg-danger' : 'bg-secondary');
         });
         fetch('/view/' + vn + '/move_card', {
           method: 'POST',
@@ -490,7 +536,13 @@ const run = async (
 
 // ─── routes ───────────────────────────────────────────────────────────────────
 
-const move_card = async (table_id, _vn, { group_field, min_role }, body, { req }) => {
+const move_card = async (
+  table_id,
+  _vn,
+  { group_field, min_role, wip_limits, column_order },
+  body,
+  { req }
+) => {
   const role = req.user ? req.user.role_id : 100;
   if (role > parseInt(min_role || "80", 10))
     return { json: { error: "Not authorized" } };
@@ -500,6 +552,19 @@ const move_card = async (table_id, _vn, { group_field, min_role }, body, { req }
     return { json: { error: "Missing id or column" } };
 
   const table = scTable().findOne({ id: parseInt(table_id, 10) });
+
+  // server-side WIP limit check
+  if (wip_limits && column_order) {
+    const colArr = column_order.split(",").map((s) => s.trim());
+    const limArr = wip_limits.split(",").map((s) => parseInt(s.trim(), 10) || 0);
+    const colIdx = colArr.indexOf(column);
+    if (colIdx >= 0 && limArr[colIdx] > 0) {
+      const count = await table.countRows({ [group_field]: column });
+      if (count >= limArr[colIdx])
+        return { json: { error: `Column "${column}" is at WIP limit (${limArr[colIdx]})` } };
+    }
+  }
+
   try {
     await table.updateRow({ [group_field]: column }, id, req.user);
     return { json: { success: true } };
