@@ -238,9 +238,16 @@ const run = async (
   );
 
   // ── row HTML ────────────────────────────────────────────────────────────────
+  const COLOR_MAP = {
+    Urgent: "danger", High: "warning", Medium: "info", Low: "secondary",
+    Done: "success", "In Progress": "primary", "To Do": "light",
+    danger: "danger", warning: "warning", info: "info", success: "success",
+    primary: "primary", secondary: "secondary",
+  };
   const rowHtml = (row) => {
     const label = String(row[label_field] ?? row[pk_name]);
-    const color = color_field && row[color_field] ? String(row[color_field]) : "primary";
+    const rawColor = color_field && row[color_field] ? String(row[color_field]) : "primary";
+    const color = COLOR_MAP[rawColor] || "primary";
 
     const startRaw = row[start_field] ? new Date(row[start_field]) : null;
     const endRaw = row[end_field] ? new Date(row[end_field]) : null;

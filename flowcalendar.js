@@ -12,7 +12,10 @@ const {
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function isoDate(d) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function calDays(year, month) {
@@ -202,9 +205,16 @@ const run = async (
   const days = calDays(displayYear, displayMonth);
 
   // ── event chip HTML ─────────────────────────────────────────────────────────
+  const COLOR_MAP = {
+    Urgent: "danger", High: "warning", Medium: "info", Low: "secondary",
+    Done: "success", "In Progress": "primary", "To Do": "light",
+    danger: "danger", warning: "warning", info: "info", success: "success",
+    primary: "primary", secondary: "secondary",
+  };
   const chipHtml = (row) => {
     const title = String(row[title_field] ?? row[pk_name]);
-    const color = color_field && row[color_field] ? String(row[color_field]) : "primary";
+    const rawColor = color_field && row[color_field] ? String(row[color_field]) : "primary";
+    const color = COLOR_MAP[rawColor] || "primary";
     const attrs = {
       class: `badge bg-${color} sc-flowcal-chip d-block text-truncate mb-1`,
       "data-id": String(row[pk_name]),
