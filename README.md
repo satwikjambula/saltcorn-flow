@@ -2,12 +2,29 @@
 
 Asana-style project and task management plugin for [Saltcorn](https://github.com/saltcorn/saltcorn).
 
-Adds two view templates to any table:
+Adds three view templates to any table:
 
 - **FlowBoard** — drag-and-drop kanban board with columns, card metadata, and inline column creation
 - **FlowList** — flat sortable task list with inline status editing, priority badges, due dates, and assignee avatars
+- **FlowZone** — configurable drag-and-drop zones (e.g. wishlist → cart → purchased) with per-zone colour headers, item counts, and optional max-item limits
 
 Powered by [SortableJS](https://sortablejs.com).
+
+---
+
+## Screenshots
+
+### FlowBoard
+
+![FlowBoard — kanban board with draggable cards, priority badges, due dates and assignee avatars](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowboard.png)
+
+### FlowList
+
+![FlowList — flat task list with inline status and priority dropdowns, due dates, assignee avatars](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowlist.png)
+
+### FlowZone
+
+![FlowZone — configurable drop zones with colour-coded headers and item counts](https://raw.githubusercontent.com/satwikjambula/saltcorn-flow/main/public/screenshots/flowzone.png)
 
 ---
 
@@ -17,6 +34,7 @@ Powered by [SortableJS](https://sortablejs.com).
 - [Installation](#installation)
 - [FlowBoard](#flowboard)
 - [FlowList](#flowlist)
+- [FlowZone](#flowzone)
 - [Testing locally](#testing-locally)
 - [License](#license)
 
@@ -69,7 +87,7 @@ A kanban board that groups rows into columns by any field value. Cards can be dr
 - Drag cards between columns — group-by field updated immediately via `POST /view/{name}/move_card`
 - Card count badge per column
 - Colour-coded due date, circular assignee avatar, priority badge on each card
-- **Add column** widget at the right end of the board — type a name and click Add to append a new column to the column order (persisted to view config)
+- **Add column** widget at the right end of the board — type a name and click + to append a new column (persisted to view config)
 - Optional card-click modal and per-column Add card button
 
 ### Example table setup
@@ -118,6 +136,43 @@ A flat, sortable task list displayed as a table. Status and priority can be edit
 | `due_date` | Date | Due date field |
 | `assignee` | String | Assignee field |
 | `position` | Integer | Position field (for drag-to-reorder) |
+
+---
+
+## FlowZone
+
+A drag-and-drop zone board for categorising items into named buckets — e.g. a product wishlist, a shopping cart, or a pipeline stage view. Each zone gets a coloured header, item count badge, and optional max-item cap enforced on both client and server.
+
+### Configuration
+
+| Field | Required | Description |
+|---|---|---|
+| Container field | ✅ | String or Integer field updated when an item is dropped into a zone |
+| Zone names | ✅ | Comma-separated zone identifiers written to the container field, e.g. `wishlist,cart,purchased` |
+| Zone display labels | — | Comma-separated display names (same order as zones), e.g. `Wishlist,My Cart,Purchased` |
+| Zone colors | — | Comma-separated Bootstrap colour names per zone: `primary`, `success`, `warning`, `danger`, `info`, `secondary` |
+| Max items per zone | — | Comma-separated max item counts per zone (0 = unlimited), e.g. `0,5,1` |
+| Card title field | ✅ | Field shown as the item label on each card |
+| Card subtitle field | — | Optional second field shown below the title |
+| Show unassigned bin | — | Show items with no container value in an Unassigned zone above the grid |
+| Minimum role to drag items | — | Lowest role that can move items between zones (default: User) |
+
+### Features
+
+- Responsive CSS grid — zones flow automatically across the available width
+- Per-zone colour-coded headers with item count badges
+- Optional max-item limit: drop is blocked client-side and validated server-side
+- Unassigned bin for items not yet placed in any zone
+- Fires Saltcorn `Update` triggers after every successful drop — business rules apply automatically
+- Ghost card while dragging with smooth 150 ms animation
+
+### Example table setup
+
+| Field | Type | Used for |
+|---|---|---|
+| `name` | String | Card title field |
+| `description` | String | Card subtitle field |
+| `zone` | String | Container field (values: `wishlist`, `cart`, `purchased`) |
 
 ---
 
@@ -173,6 +228,14 @@ Go to **Tables → Add table** and create a table with the fields from the examp
 2. Select the same table, template: **FlowList**
 3. Set title field, status field (`status`), status options (`Open,In Progress,Done`), position field (`position`)
 4. Save and open — drag rows to reorder and edit status inline
+
+### Step 7 — Create a FlowZone view
+
+1. Go to **Views → Add view**
+2. Select the same table, template: **FlowZone**
+3. Set container field to `zone`, zone names to `wishlist,cart,purchased`
+4. Optionally set zone labels, colours, max items, and card subtitle field
+5. Save and open — drag cards between zones to update the container field
 
 ---
 
