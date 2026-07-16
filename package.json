@@ -1,9 +1,16 @@
 {
   "name": "saltcorn-flow",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Asana-style project and task management plugin for Saltcorn",
   "main": "index.js",
-  "keywords": ["saltcorn", "plugin", "kanban", "board", "tasks", "project-management"],
+  "keywords": [
+    "saltcorn",
+    "plugin",
+    "kanban",
+    "board",
+    "tasks",
+    "project-management"
+  ],
   "license": "MIT",
   "dependencies": {
     "@saltcorn/markup": ">=0.5.0",
