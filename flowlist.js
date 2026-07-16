@@ -232,9 +232,13 @@ const run = async (
     );
   }
 
+  const posFieldMissing =
+    position_field && !fields.some((f) => f.name === position_field);
+
   const where = stateFieldsToWhere({ fields, state, table });
   const q = stateFieldsToQuery({ state, fields });
-  const orderBy = position_field ? { orderBy: position_field } : {};
+  const effectivePositionField = posFieldMissing ? null : position_field;
+  const orderBy = effectivePositionField ? { orderBy: effectivePositionField } : {};
   const rows = await table.getRows(where, {
     ...q,
     ...orderBy,
@@ -244,7 +248,7 @@ const run = async (
 
   const role = req.user ? req.user.role_id : 100;
   const canEdit = role <= parseInt(min_role || "80", 10);
-  const canReorder = canEdit && !!position_field;
+  const canReorder = canEdit && !!effectivePositionField;
 
   const statusOpts = status_options
     ? status_options.split(",").map((s) => s.trim())
@@ -372,7 +376,14 @@ const run = async (
     )
   );
 
-  if (!canEdit) return listHtml;
+  const posWarn = posFieldMissing
+    ? div(
+        { class: "alert alert-warning py-1 px-2 mb-2 small" },
+        `FlowList: position field "${position_field}" does not exist on this table — drag-to-reorder is disabled. Reconfigure the view to fix this.`
+      )
+    : "";
+
+  if (!canEdit) return posWarn + listHtml;
 
   // ── scripts ──────────────────────────────────────────────────────────────────
   const editorScript = script(
@@ -437,7 +448,7 @@ const run = async (
 `)
   );
 
-  return listHtml + editorScript;
+  return posWarn + listHtml + editorScript;
 };
 
 // ─── routes ───────────────────────────────────────────────────────────────────

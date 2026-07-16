@@ -3,6 +3,7 @@ const {
   div,
   span,
   small,
+  a,
   script,
   domReady,
   text,
@@ -42,12 +43,20 @@ const configuration_workflow = (req) => {
         name: req.__("Zone settings"),
         form: async (context) => {
           const Table = scTable();
+          const View = scView();
           const Form = scForm();
           const table = Table.findOne({ id: parseInt(context.table_id, 10) });
           const fields = table.getFields();
           const allFields = fields.filter((f) => !f.primary_key);
           const stringIntFields = allFields.filter(
             (f) => f.type?.name === "String" || f.type?.name === "Integer"
+          );
+
+          const show_views = await View.find_table_views_where(
+            context.table_id,
+            ({ state_fields, viewrow }) =>
+              viewrow.name !== context.viewname &&
+              state_fields.some((sf) => sf.name === "id")
           );
 
           return new Form({
@@ -120,6 +129,21 @@ const configuration_workflow = (req) => {
                 },
               },
               {
+                name: "show_view",
+                label: req.__("Card detail view"),
+                sublabel: req.__(
+                  "Optional: clicking a card opens this view in a modal"
+                ),
+                type: "String",
+                required: false,
+                attributes: {
+                  options: [
+                    { label: req.__("None"), value: "" },
+                    ...show_views.map((v) => v.select_option),
+                  ],
+                },
+              },
+              {
                 name: "show_unassigned",
                 label: req.__("Show unassigned bin"),
                 sublabel: req.__(
@@ -180,6 +204,7 @@ const run = async (
     zones: zonesRaw,
     card_title_field,
     card_subtitle_field,
+    show_view,
     show_unassigned,
     min_role,
   } = cfg || {};
@@ -234,19 +259,34 @@ const run = async (
           )
         : "";
 
-    return div(
-      {
-        class:
-          "card sc-flowzone-item mb-2" +
-          (canDrag ? " sc-flowzone-draggable" : ""),
-        "data-id": String(row[pk_name]),
-        "data-container": String(row[container_field] ?? ""),
-      },
-      div({ class: "card-body p-2" },
-        span({ class: "sc-flowzone-title fw-semibold" }, title),
-        subtitle
-      )
+    const cardBody = div({ class: "card-body p-2" },
+      span({ class: "sc-flowzone-title fw-semibold" }, title),
+      subtitle
     );
+
+    const cardAttrs = {
+      class:
+        "card sc-flowzone-item mb-2" +
+        (canDrag ? " sc-flowzone-draggable" : ""),
+      "data-id": String(row[pk_name]),
+      "data-container": String(row[container_field] ?? ""),
+    };
+
+    if (show_view) {
+      return div(
+        cardAttrs,
+        a(
+          {
+            href: "javascript:void(0)",
+            "data-sc-modal": `/view/${show_view}?id=${row[pk_name]}`,
+            class: "text-decoration-none text-body stretched-link",
+          },
+          cardBody
+        )
+      );
+    }
+
+    return div(cardAttrs, cardBody);
   };
 
   // ── zone panel HTML ─────────────────────────────────────────────────────────
